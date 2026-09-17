@@ -210,6 +210,16 @@ def check_geometry(meta):
                 add(rows, "R1", "G7", f'ป้าย {e["label"]!r} ไปทับกล่อง {n["id"]} — '
                     "ป้ายต้องอยู่บนพื้นที่ว่าง", f'{e["src"]}→{e["dst"]}')
 
+    exits = {}
+    for e in meta["edges"]:
+        if e["type"] in ("yes", "no"):
+            exits.setdefault(e["src"], {})[e["type"]] = e["out_anchor"][0]
+    for node, ex in exits.items():
+        if len(ex) == 2 and len(set(ex.values())) == 1:
+            add(rows, "R0", "G9", f'เส้น Yes กับ No ออกจากด้าน {list(ex.values())[0]} '
+                "ด้านเดียวกัน — ทางออกสองทางของข้าวหลามตัดต้องแยกด้านกัน ไม่งั้นเห็นเป็นเส้นเดียว "
+                "ที่มีป้ายทับกัน", node)
+
     dia = {(n["w"], n["h"]) for n in meta["nodes"] if n["kind"] == "DEC"}
     if len(dia) > 1:
         add(rows, "R0", "G4", f"Diamond ขนาดไม่เท่ากัน: {sorted(dia)} — ต้องเท่ากันทุกอัน", "diamonds")

@@ -436,31 +436,39 @@ def anchor_pt(n, side, slot=0):
 
 
 def pick_anchor(node, etype, pref, used, way):
-    """เลือกจุดเชื่อมตามกฎของทีม: เส้นรูปแบบเดียวกันและทิศเดียวกันใช้จุดเดียวกันได้
-    (จุดรวมเส้น) ส่วนเส้นคนละรูปแบบต้องไปเกาะ *ด้านอื่น* ของกล่อง — การขยับจุดบนด้านเดิม
-    ใช้เป็นทางออกสุดท้ายเมื่อทั้งสี่ด้านถูกรูปแบบอื่นจองไปหมดแล้ว"""
-    reg = used.setdefault(node["id"], {})
-    style = STYLE[etype]
-    mine = (style, way)
+    """เลือกจุดเชื่อมตามกฎของทีม โดยแยกสองทิศคนละเกณฑ์
 
-    def side_styles(side):
-        return {v[0] for k, v in reg.items() if k[0] == side}
+    **ทางออก** — เส้นแต่ละประเภทต้องออกคนละด้าน เพราะทางออกของข้าวหลามตัดต้องอ่านออกว่า
+    เส้นไหนคือ Yes เส้นไหนคือ No ถ้าซ้อนจุดกันจะเหลือเส้นเดียวที่มีป้ายทับกัน
 
-    for side in pref[etype]:                     # จุดที่เป็นของรูปแบบและทิศเดียวกันอยู่แล้ว
+    **ทางเข้า** — เส้นรูปแบบเดียวกันรวมจุดกันได้ (เป็นจุดรวมเส้น) เพราะทุกเส้นที่เข้ามา
+    หมายถึง "ไหลเข้ากล่องนี้" เหมือนกันหมด ส่วนเส้นคนละรูปแบบ (ประน้ำเงิน / ประเหลือง)
+    ต้องไปเกาะด้านอื่นของกล่อง
+
+    การขยับจุดบนด้านเดิมใช้เป็นทางออกสุดท้ายเมื่อทั้งสี่ด้านถูกจองไปหมดแล้ว
+    """
+    reg = used.setdefault(node["id"], {})        # (side, slot) -> (group, way)
+    group = etype if way == "out" else STYLE[etype]
+    mine = (group, way)
+
+    def groups_on(side):
+        return {v for k, v in reg.items() if k[0] == side}
+
+    for side in pref[etype]:                     # จุดที่เป็นของเราอยู่แล้ว
         for slot in (0, 1, 2):
             if reg.get((side, slot)) == mine:
                 return side, slot
     for side in pref[etype]:                     # ด้านที่ยังไม่มีใครใช้
-        if not side_styles(side):
+        if not groups_on(side):
             reg[(side, 0)] = mine
             return side, 0
-    for side in pref[etype]:                     # ด้านที่มีแต่รูปแบบเดียวกัน (คนละทิศ)
-        if side_styles(side) == {style}:
+    for side in pref[etype]:                     # ด้านที่มีแต่พวกเดียวกัน
+        if groups_on(side) <= {mine}:
             for slot in (0, 1, 2):
                 if (side, slot) not in reg:
                     reg[(side, slot)] = mine
                     return side, slot
-    for side in pref[etype]:                     # ทางออกสุดท้าย: แทรกจุดบนด้านที่ถูกใช้แล้ว
+    for side in pref[etype]:                     # ทางออกสุดท้าย
         for slot in (1, 2):
             if (side, slot) not in reg:
                 reg[(side, slot)] = mine
@@ -655,7 +663,7 @@ def render(src, out_path=None, title=None, tokens=None):
         sa, ss = pick_anchor(s, e["type"], OUT_PREF, used, "out")
         if SHAPE[t["kind"]] == "diamond" and STYLE[e["type"]] == "solid":
             ta, ts = DEC_IN          # เส้นทึบทุกเส้นรวมที่ปลายซ้าย (ดู flow-rules G6)
-            used.setdefault(t["id"], {})[(ta, ts)] = ("solid", "in")
+            used.setdefault(t["id"], {})[(ta, ts)] = (STYLE[EDGE_SOLID], "in")
         else:
             ta, ts = pick_anchor(t, e["type"], IN_PREF, used, "in")
         A, B = anchor_pt(s, sa, ss), anchor_pt(t, ta, ts)
