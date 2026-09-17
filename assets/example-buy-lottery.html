@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ซื้อลอตเตอรี่ (ตัวอย่างอ้างอิง)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary:#3B5BDB; --primary-d:#2F49AF; --ink:#17181C; --muted:#6B7280;
+    --paper:#FFFFFF; --paper-2:#F7F8FB; --yes:#16A34A; --no:#DC2626;
+    --perm:#F5B400; --hairline:#E4E7EE;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper-2); color:var(--ink);
+    font-family:'Sarabun',-apple-system,'Helvetica Neue',sans-serif; }
+  header { position:sticky; top:0; z-index:5; background:var(--paper);
+    border-bottom:1px solid var(--hairline); padding:20px 28px; }
+  h1 { font-size:20px; margin:0 0 4px; font-weight:700; }
+  .sub { font-size:13px; color:var(--muted); display:flex; gap:16px; flex-wrap:wrap; }
+  .sub b { font-weight:600; color:var(--ink); }
+  main { display:flex; gap:24px; align-items:flex-start; padding:24px 28px 80px; }
+  .lg { position:sticky; top:104px; flex:0 0 300px; background:var(--paper);
+    border:1px solid var(--hairline); border-radius:16px; padding:20px 24px; }
+  .lg-t { font-weight:700; font-size:15px; margin-bottom:14px;
+    border-bottom:2px solid var(--ink); display:inline-block; padding-bottom:2px; }
+  .lg-i { display:flex; gap:12px; align-items:center; margin:12px 0; font-size:12px;
+    color:var(--muted); line-height:1.4; }
+  .lg-i svg { flex:0 0 54px; }
+  .canvas { flex:1 1 auto; min-width:0; overflow:auto; background:var(--paper);
+    border:1px solid var(--hairline); border-radius:16px; padding:8px; }
+  .zoomwrap { transform-origin:0 0; width:6722px; }
+  svg.flow { display:block; width:6722px; height:3438px; }
+  .zoom { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+  .zoom button { font-family:inherit; font-size:12px; font-weight:600;
+    color:var(--primary); background:var(--paper); border:1px solid var(--primary);
+    border-radius:8px; padding:6px 12px; cursor:pointer; }
+  .zoom button[aria-pressed="true"] { background:var(--primary); color:#fff; }
+  .n-rect, .n-oval, .n-chip, .n-dia { fill:var(--primary); stroke:none; }
+  .n-note { fill:#FFFBEC; stroke:var(--perm); stroke-width:2; stroke-dasharray:8 6; }
+  text { text-anchor:middle; dominant-baseline:central; font-weight:600;
+    font-family:'Sarabun',sans-serif; }
+  .t-on { fill:#fff; } .t-ink { fill:var(--ink); } .t-note { fill:#8A6100; }
+  .e-solid { fill:none; stroke:var(--primary); stroke-width:3; }
+  .e-back { fill:none; stroke:var(--primary); stroke-width:3; stroke-dasharray:9 8; }
+  .e-perm { fill:none; stroke:var(--perm); stroke-width:4; stroke-dasharray:10 8;
+    stroke-linecap:round; }
+  .e-dot { fill:var(--primary); }
+  .edge-label rect { fill:var(--paper); stroke:none; }
+  .l-yes { fill:var(--yes); font-weight:700; }
+  .l-no { fill:var(--no); font-weight:700; }
+  .l-neutral { fill:var(--muted); font-weight:700; }
+  @media (max-width:900px) { main { flex-direction:column; }
+    .lg { position:static; flex:1 1 auto; width:100%; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>ซื้อลอตเตอรี่ (ตัวอย่างอ้างอิง)</h1>
+  <div class="sub">
+    <span><b>เป้าหมาย:</b> ผู้ใช้ซื้อสลากที่เลือกไว้ได้สำเร็จ</span>
+    <span><b>ดีไซเนอร์:</b> Amm</span>
+    <span><b>วันที่:</b> 2026-09-17</span>
+    <span>10 กล่อง · 13 เส้น</span>
+  </div>
+</header>
+<main>
+  
+      <div class="lg">
+        <div class="lg-t">Tools in Flow</div>
+        <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><path d="M27 2 L52 13 L27 24 L2 13 Z" fill="var(--primary)"/></svg><span>Diamond Condition — จบประโยคด้วย “ใช่หรือไม่?”</span></div>
+        <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><rect x="2" y="5" width="50" height="16" rx="8" fill="var(--primary)"/></svg><span>Link To Flow</span></div>
+        <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><circle cx="6" cy="13" r="4" fill="var(--primary)"/><path d="M10 13 H44" stroke="var(--primary)" stroke-width="3"/><path d="M42 7 l8 6 -8 6" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>เส้นปกติ — กดแล้วไปหน้าบันทึก และไปต่อ</span></div>
+        <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><circle cx="6" cy="13" r="4" fill="var(--primary)"/><path d="M10 13 H44" stroke="var(--primary)" stroke-width="3" stroke-dasharray="7 6"/><path d="M42 7 l8 6 -8 6" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>เส้นปกติ — ย้อนกลับไปหน้าก่อนหน้า</span></div>
+        <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><path d="M2 13 H10" stroke="var(--primary)" stroke-width="3"/><text x="14" y="17" font-size="10" fill="var(--yes)" font-weight="700">Yes</text><path d="M34 13 H44" stroke="var(--primary)" stroke-width="3"/><path d="M42 7 l8 6 -8 6" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>ทางออก Diamond: Yes</span></div>
+        <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><path d="M2 13 H10" stroke="var(--primary)" stroke-width="3"/><text x="15" y="17" font-size="10" fill="var(--no)" font-weight="700">No</text><path d="M34 13 H44" stroke="var(--primary)" stroke-width="3"/><path d="M42 7 l8 6 -8 6" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>ทางออก Diamond: No</span></div>
+        <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><path d="M2 13 H50" stroke="var(--perm)" stroke-width="4" stroke-dasharray="9 7" stroke-linecap="round"/></svg><span>หน้านั้น ๆ มี Permutation (Edge Case)</span></div>
+      </div>
+  <div class="canvas">
+    <div class="zoom" role="group" aria-label="ย่อ/ขยาย">
+      <button data-z="fit" aria-pressed="true">พอดีจอ</button>
+      <button data-z="0.5">50%</button>
+      <button data-z="1">100% (ขนาดจริง)</button>
+      <span style="font-size:12px;color:var(--muted)">canvas 6722×3438px</span>
+    </div>
+    <div class="zoomwrap" id="zw">
+    <svg class="flow" viewBox="0 0 6722 3438" role="img" aria-labelledby="ttl dsc">
+      <title id="ttl">ซื้อลอตเตอรี่ (ตัวอย่างอ้างอิง)</title>
+      <desc id="dsc">User flow diagram — ผู้ใช้ซื้อสลากที่เลือกไว้ได้สำเร็จ</desc>
+      <defs>
+        <marker id="arw" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
+          markerHeight="7" orient="auto-start-reverse">
+          <path d="M2 1 L10 6 L2 11" fill="none" stroke="#3B5BDB" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arw-perm" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
+          markerHeight="7" orient="auto-start-reverse">
+          <path d="M2 1 L10 6 L2 11" fill="none" stroke="#F5B400" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+    <path class="e-solid" marker-end="url(#arw)" d="M 449.0 329.0 L 949.0 329.0"/>
+    <circle class="e-dot" cx="449.0" cy="329.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 1253.0 329.0 L 2453.0 329.0"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 1101.0 433.0 L 1101.0 477.0 A 16.0 16.0 0 0 0 1117.0 493.0 L 1562.0 493.0 A 16.0 16.0 0 0 1 1578.0 509.0 L 1578.0 945.0 A 16.0 16.0 0 0 0 1594.0 961.0 L 1753.0 961.0"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 1953.0 961.0 L 2262.0 961.0 A 16.0 16.0 0 0 0 2278.0 945.0 L 2278.0 345.0 A 16.0 16.0 0 0 1 2294.0 329.0 L 2453.0 329.0"/>
+    <circle class="e-dot" cx="1953.0" cy="961.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 2757.0 329.0 L 3957.0 329.0"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 2605.0 433.0 L 2605.0 477.0 A 16.0 16.0 0 0 0 2621.0 493.0 L 3066.0 493.0 A 16.0 16.0 0 0 1 3082.0 509.0 L 3082.0 2057.0 A 16.0 16.0 0 0 0 3098.0 2073.0 L 3257.0 2073.0"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 3457.0 2073.0 L 3766.0 2073.0 A 16.0 16.0 0 0 0 3782.0 2057.0 L 3782.0 345.0 A 16.0 16.0 0 0 1 3798.0 329.0 L 3957.0 329.0"/>
+    <circle class="e-dot" cx="3457.0" cy="2073.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 4261.0 329.0 L 5461.0 329.0"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 4109.0 433.0 L 4109.0 477.0 A 16.0 16.0 0 0 0 4125.0 493.0 L 4570.0 493.0 A 16.0 16.0 0 0 1 4586.0 509.0 L 4586.0 2613.0 A 16.0 16.0 0 0 0 4602.0 2629.0 L 4761.0 2629.0"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 4961.0 2629.0 L 5270.0 2629.0 A 16.0 16.0 0 0 0 5286.0 2613.0 L 5286.0 347.0 A 16.0 16.0 0 0 1 5302.0 331.0 L 5461.0 331.0"/>
+    <circle class="e-dot" cx="4961.0" cy="2629.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 5661.0 329.0 L 6217.0 329.0"/>
+    <circle class="e-dot" cx="5661.0" cy="329.0" r="6"/>
+    <path class="e-back" marker-end="url(#arw)" d="M 3357.0 2045.0 L 3357.0 2001.0 A 16.0 16.0 0 0 0 3341.0 1985.0 L 2144.0 1985.0 A 16.0 16.0 0 0 1 2128.0 1969.0 L 2128.0 979.0 A 16.0 16.0 0 0 0 2112.0 963.0 L 1953.0 963.0"/>
+    <circle class="e-dot" cx="3357.0" cy="2045.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 1953.0 961.0 L 2262.0 961.0 A 16.0 16.0 0 0 1 2278.0 977.0 L 2278.0 1501.0 A 16.0 16.0 0 0 0 2294.0 1517.0 L 2527.0 1517.0"/>
+    <circle class="e-dot" cx="1953.0" cy="961.0" r="6"/>
+    <path class="e-perm" marker-end="url(#arw-perm)" d="M 5561.0 357.0 L 5561.0 401.0 A 16.0 16.0 0 0 0 5577.0 417.0 L 5970.0 417.0 A 16.0 16.0 0 0 1 5986.0 433.0 L 5986.0 3169.0 A 16.0 16.0 0 0 0 6002.0 3185.0 L 6161.0 3185.0"/>
+    <rect class="n-oval" x="225.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
+    <text class="t-on" x="337.0" y="329.0" font-size="16">กดซื้อ</text>
+    <path class="n-dia" d="M 1087.8 234.0 A 16.0 16.0 0 0 1 1114.2 234.0 L 1239.8 320.0 A 16.0 16.0 0 0 1 1239.8 338.0 L 1114.2 424.0 A 16.0 16.0 0 0 1 1087.8 424.0 L 962.2 338.0 A 16.0 16.0 0 0 1 962.2 320.0 Z"/>
+    <text class="t-on" x="1101.0" y="317.0" font-size="16">ล็อกอินแล้ว</text>
+    <text class="t-on" x="1101.0" y="341.0" font-size="16">ใช่หรือไม่?</text>
+    <rect class="n-rect" x="1753.0" y="933.0" width="200.0" height="56.0" rx="16"/>
+    <text class="t-on" x="1853.0" y="961.0" font-size="16">หน้าเข้าสู่ระบบ</text>
+    <path class="n-dia" d="M 2591.8 234.0 A 16.0 16.0 0 0 1 2618.2 234.0 L 2743.8 320.0 A 16.0 16.0 0 0 1 2743.8 338.0 L 2618.2 424.0 A 16.0 16.0 0 0 1 2591.8 424.0 L 2466.2 338.0 A 16.0 16.0 0 0 1 2466.2 320.0 Z"/>
+    <text class="t-on" x="2605.0" y="317.0" font-size="16">ยืนยันตัวตน (KYC)</text>
+    <text class="t-on" x="2605.0" y="341.0" font-size="16">แล้ว ใช่หรือไม่?</text>
+    <rect class="n-rect" x="3257.0" y="2045.0" width="200.0" height="56.0" rx="16"/>
+    <text class="t-on" x="3357.0" y="2073.0" font-size="16">หน้ายืนยันตัวตน</text>
+    <path class="n-dia" d="M 4095.8 234.0 A 16.0 16.0 0 0 1 4122.2 234.0 L 4247.8 320.0 A 16.0 16.0 0 0 1 4247.8 338.0 L 4122.2 424.0 A 16.0 16.0 0 0 1 4095.8 424.0 L 3970.2 338.0 A 16.0 16.0 0 0 1 3970.2 320.0 Z"/>
+    <text class="t-on" x="4109.0" y="305.0" font-size="16">ยอดเงินในกระ</text>
+    <text class="t-on" x="4109.0" y="329.0" font-size="16">เป๋าพอ</text>
+    <text class="t-on" x="4109.0" y="353.0" font-size="16">ใช่หรือไม่?</text>
+    <rect class="n-rect" x="4761.0" y="2601.0" width="200.0" height="56.0" rx="16"/>
+    <text class="t-on" x="4861.0" y="2629.0" font-size="16">หน้าเติมเงิน</text>
+    <rect class="n-rect" x="5461.0" y="301.0" width="200.0" height="56.0" rx="16"/>
+    <text class="t-on" x="5561.0" y="329.0" font-size="16">หน้าชำระเงิน</text>
+    <rect class="n-oval" x="6217.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
+    <text class="t-on" x="6329.0" y="329.0" font-size="16">ซื้อสำเร็จ</text>
+    <rect class="n-chip" x="2527.0" y="1489.0" width="156.0" height="56.0" rx="8"/>
+    <text class="t-on" x="2605.0" y="1517.0" font-size="16">Flow ยืนยัน OTP</text>
+    <rect class="n-note" x="6161.0" y="3157.0" width="336.0" height="56.0" rx="16"/>
+    <text class="t-note" x="6329.0" y="3185.0" font-size="13">ตัดเงินไม่ผ่าน / สลากถูกคนอื่นซื้อตัด / หมดเวลาจอง</text>
+    <g class="edge-label"><rect x="1332.3" y="314.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="1353.0" y="329.0" font-size="13">Yes</text></g>
+    <g class="edge-label"><rect x="1123.7" y="478.0" width="34.6" height="30" rx="8"/><text class="l-no" x="1141.0" y="493.0" font-size="13">No</text></g>
+    <g class="edge-label"><rect x="2836.3" y="314.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="2857.0" y="329.0" font-size="13">Yes</text></g>
+    <g class="edge-label"><rect x="2627.7" y="478.0" width="34.6" height="30" rx="8"/><text class="l-no" x="2645.0" y="493.0" font-size="13">No</text></g>
+    <g class="edge-label"><rect x="4340.3" y="314.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="4361.0" y="329.0" font-size="13">Yes</text></g>
+    <g class="edge-label"><rect x="4131.7" y="478.0" width="34.6" height="30" rx="8"/><text class="l-no" x="4149.0" y="493.0" font-size="13">No</text></g>
+    </svg>
+    </div>
+  </div>
+</main>
+<script>
+  (function () {
+    var zw = document.getElementById('zw'), W = 6722, H = 3438;
+    var wrap = zw.parentElement, mode = 'fit';
+    function apply() {
+      var k = mode === 'fit' ? Math.min(1, (wrap.clientWidth - 24) / W) : parseFloat(mode);
+      zw.style.transform = 'scale(' + k + ')';
+      zw.style.height = (H * k) + 'px';
+    }
+    document.querySelectorAll('.zoom button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        mode = b.dataset.z;
+        document.querySelectorAll('.zoom button').forEach(function (o) {
+          o.setAttribute('aria-pressed', String(o === b));
+        });
+        apply();
+      });
+    });
+    addEventListener('resize', function () { if (mode === 'fit') apply(); });
+    apply();
+  })();
+</script>
+<script type="application/json" id="flow-meta">
+{
+ "flow": "ซื้อลอตเตอรี่ (ตัวอย่างอ้างอิง)",
+ "goal": "ผู้ใช้ซื้อสลากที่เลือกไว้ได้สำเร็จ",
+ "owner": "Amm",
+ "date": "2026-09-17",
+ "source": "example-buy-lottery.flow",
+ "spacing": {
+  "edge_min": 500.0,
+  "label_offset": 100.0
+ },
+ "geometry": {
+  "radius": 16,
+  "pad_y": 16,
+  "pad_x": 24,
+  "diamond": {
+   "w": 304,
+   "h": 208
+  },
+  "elbow_r": 16
+ },
+ "canvas": {
+  "w": 6722,
+  "h": 3438
+ },
+ "nodes": [
+  {
+   "id": "s0",
+   "kind": "START",
+   "label": "กดซื้อ",
+   "x": 225.0,
+   "y": 301.0,
+   "w": 224,
+   "h": 56,
+   "rank": 0,
+   "col": 0,
+   "line": 7
+  },
+  {
+   "id": "d1",
+   "kind": "DEC",
+   "label": "ล็อกอินแล้ว ใช่หรือไม่?",
+   "x": 949.0,
+   "y": 225.0,
+   "w": 304,
+   "h": 208,
+   "rank": 1,
+   "col": 0,
+   "line": 8
+  },
+  {
+   "id": "p1",
+   "kind": "PAGE",
+   "label": "หน้าเข้าสู่ระบบ",
+   "x": 1753.0,
+   "y": 933.0,
+   "w": 200,
+   "h": 56,
+   "rank": 2,
+   "col": 1,
+   "line": 9
+  },
+  {
+   "id": "d2",
+   "kind": "DEC",
+   "label": "ยืนยันตัวตน (KYC) แล้ว ใช่หรือไม่?",
+   "x": 2453.0,
+   "y": 225.0,
+   "w": 304,
+   "h": 208,
+   "rank": 3,
+   "col": 0,
+   "line": 10
+  },
+  {
+   "id": "p2",
+   "kind": "PAGE",
+   "label": "หน้ายืนยันตัวตน",
+   "x": 3257.0,
+   "y": 2045.0,
+   "w": 200,
+   "h": 56,
+   "rank": 4,
+   "col": 3,
+   "line": 11
+  },
+  {
+   "id": "d3",
+   "kind": "DEC",
+   "label": "ยอดเงินในกระเป๋าพอ ใช่หรือไม่?",
+   "x": 3957.0,
+   "y": 225.0,
+   "w": 304,
+   "h": 208,
+   "rank": 5,
+   "col": 0,
+   "line": 12
+  },
+  {
+   "id": "p3",
+   "kind": "PAGE",
+   "label": "หน้าเติมเงิน",
+   "x": 4761.0,
+   "y": 2601.0,
+   "w": 200,
+   "h": 56,
+   "rank": 6,
+   "col": 4,
+   "line": 13
+  },
+  {
+   "id": "p4",
+   "kind": "PAGE",
+   "label": "หน้าชำระเงิน",
+   "x": 5461.0,
+   "y": 301.0,
+   "w": 200,
+   "h": 56,
+   "rank": 7,
+   "col": 0,
+   "line": 14
+  },
+  {
+   "id": "e1",
+   "kind": "END",
+   "label": "ซื้อสำเร็จ",
+   "x": 6217.0,
+   "y": 301.0,
+   "w": 224,
+   "h": 56,
+   "rank": 8,
+   "col": 0,
+   "line": 15
+  },
+  {
+   "id": "l1",
+   "kind": "LINK",
+   "label": "Flow ยืนยัน OTP",
+   "x": 2527.0,
+   "y": 1489.0,
+   "w": 156,
+   "h": 56,
+   "rank": 3,
+   "col": 2,
+   "line": 16
+  },
+  {
+   "id": "p4__perm",
+   "kind": "PERMNOTE",
+   "label": "ตัดเงินไม่ผ่าน / สลากถูกคนอื่นซื้อตัด / หมดเวลาจอง",
+   "x": 6161.0,
+   "y": 3157.0,
+   "w": 336,
+   "h": 56,
+   "rank": 8,
+   "col": 5,
+   "line": 32
+  }
+ ],
+ "edges": [
+  {
+   "src": "s0",
+   "dst": "d1",
+   "type": "solid",
+   "label": "",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 500.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 18
+  },
+  {
+   "src": "d1",
+   "dst": "d2",
+   "type": "yes",
+   "label": "Yes",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 1200.0,
+   "label_pos": {
+    "x": 1353.0,
+    "y": 329.0,
+    "dist_from_exit": 100.0
+   },
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 19
+  },
+  {
+   "src": "d1",
+   "dst": "p1",
+   "type": "no",
+   "label": "No",
+   "out_anchor": "S0",
+   "in_anchor": "W0",
+   "length": 1180.0,
+   "label_pos": {
+    "x": 1141.0,
+    "y": 493.0,
+    "dist_from_exit": 100.0
+   },
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 20
+  },
+  {
+   "src": "p1",
+   "dst": "d2",
+   "type": "solid",
+   "label": "",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 1132.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 21
+  },
+  {
+   "src": "d2",
+   "dst": "d3",
+   "type": "yes",
+   "label": "Yes",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 1200.0,
+   "label_pos": {
+    "x": 2857.0,
+    "y": 329.0,
+    "dist_from_exit": 100.0
+   },
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 22
+  },
+  {
+   "src": "d2",
+   "dst": "p2",
+   "type": "no",
+   "label": "No",
+   "out_anchor": "S0",
+   "in_anchor": "W0",
+   "length": 2292.0,
+   "label_pos": {
+    "x": 2645.0,
+    "y": 493.0,
+    "dist_from_exit": 100.0
+   },
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 23
+  },
+  {
+   "src": "p2",
+   "dst": "d3",
+   "type": "solid",
+   "label": "",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 2244.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 24
+  },
+  {
+   "src": "d3",
+   "dst": "p4",
+   "type": "yes",
+   "label": "Yes",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 1200.0,
+   "label_pos": {
+    "x": 4361.0,
+    "y": 329.0,
+    "dist_from_exit": 100.0
+   },
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 25
+  },
+  {
+   "src": "d3",
+   "dst": "p3",
+   "type": "no",
+   "label": "No",
+   "out_anchor": "S0",
+   "in_anchor": "W0",
+   "length": 2848.0,
+   "label_pos": {
+    "x": 4149.0,
+    "y": 493.0,
+    "dist_from_exit": 100.0
+   },
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 26
+  },
+  {
+   "src": "p3",
+   "dst": "p4",
+   "type": "solid",
+   "label": "",
+   "out_anchor": "E0",
+   "in_anchor": "W1",
+   "length": 2798.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 27
+  },
+  {
+   "src": "p4",
+   "dst": "e1",
+   "type": "solid",
+   "label": "",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 556.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 28
+  },
+  {
+   "src": "p2",
+   "dst": "p1",
+   "type": "back",
+   "label": "",
+   "out_anchor": "N0",
+   "in_anchor": "E1",
+   "length": 2486.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 29
+  },
+  {
+   "src": "p1",
+   "dst": "l1",
+   "type": "solid",
+   "label": "",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 1130.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 30
+  },
+  {
+   "src": "p4",
+   "dst": "p4__perm",
+   "type": "perm",
+   "label": "",
+   "out_anchor": "S0",
+   "in_anchor": "W0",
+   "length": 3428.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 32
+  }
+ ]
+}
+</script>
+</body>
+</html>

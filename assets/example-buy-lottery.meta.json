@@ -1,0 +1,367 @@
+{
+ "flow": "ซื้อลอตเตอรี่ (ตัวอย่างอ้างอิง)",
+ "goal": "ผู้ใช้ซื้อสลากที่เลือกไว้ได้สำเร็จ",
+ "owner": "Amm",
+ "date": "2026-09-17",
+ "source": "example-buy-lottery.flow",
+ "spacing": {
+  "edge_min": 500.0,
+  "label_offset": 100.0
+ },
+ "geometry": {
+  "radius": 16,
+  "pad_y": 16,
+  "pad_x": 24,
+  "diamond": {
+   "w": 304,
+   "h": 208
+  },
+  "elbow_r": 16
+ },
+ "canvas": {
+  "w": 6722,
+  "h": 3438
+ },
+ "nodes": [
+  {
+   "id": "s0",
+   "kind": "START",
+   "label": "กดซื้อ",
+   "x": 225.0,
+   "y": 301.0,
+   "w": 224,
+   "h": 56,
+   "rank": 0,
+   "col": 0,
+   "line": 7
+  },
+  {
+   "id": "d1",
+   "kind": "DEC",
+   "label": "ล็อกอินแล้ว ใช่หรือไม่?",
+   "x": 949.0,
+   "y": 225.0,
+   "w": 304,
+   "h": 208,
+   "rank": 1,
+   "col": 0,
+   "line": 8
+  },
+  {
+   "id": "p1",
+   "kind": "PAGE",
+   "label": "หน้าเข้าสู่ระบบ",
+   "x": 1753.0,
+   "y": 933.0,
+   "w": 200,
+   "h": 56,
+   "rank": 2,
+   "col": 1,
+   "line": 9
+  },
+  {
+   "id": "d2",
+   "kind": "DEC",
+   "label": "ยืนยันตัวตน (KYC) แล้ว ใช่หรือไม่?",
+   "x": 2453.0,
+   "y": 225.0,
+   "w": 304,
+   "h": 208,
+   "rank": 3,
+   "col": 0,
+   "line": 10
+  },
+  {
+   "id": "p2",
+   "kind": "PAGE",
+   "label": "หน้ายืนยันตัวตน",
+   "x": 3257.0,
+   "y": 2045.0,
+   "w": 200,
+   "h": 56,
+   "rank": 4,
+   "col": 3,
+   "line": 11
+  },
+  {
+   "id": "d3",
+   "kind": "DEC",
+   "label": "ยอดเงินในกระเป๋าพอ ใช่หรือไม่?",
+   "x": 3957.0,
+   "y": 225.0,
+   "w": 304,
+   "h": 208,
+   "rank": 5,
+   "col": 0,
+   "line": 12
+  },
+  {
+   "id": "p3",
+   "kind": "PAGE",
+   "label": "หน้าเติมเงิน",
+   "x": 4761.0,
+   "y": 2601.0,
+   "w": 200,
+   "h": 56,
+   "rank": 6,
+   "col": 4,
+   "line": 13
+  },
+  {
+   "id": "p4",
+   "kind": "PAGE",
+   "label": "หน้าชำระเงิน",
+   "x": 5461.0,
+   "y": 301.0,
+   "w": 200,
+   "h": 56,
+   "rank": 7,
+   "col": 0,
+   "line": 14
+  },
+  {
+   "id": "e1",
+   "kind": "END",
+   "label": "ซื้อสำเร็จ",
+   "x": 6217.0,
+   "y": 301.0,
+   "w": 224,
+   "h": 56,
+   "rank": 8,
+   "col": 0,
+   "line": 15
+  },
+  {
+   "id": "l1",
+   "kind": "LINK",
+   "label": "Flow ยืนยัน OTP",
+   "x": 2527.0,
+   "y": 1489.0,
+   "w": 156,
+   "h": 56,
+   "rank": 3,
+   "col": 2,
+   "line": 16
+  },
+  {
+   "id": "p4__perm",
+   "kind": "PERMNOTE",
+   "label": "ตัดเงินไม่ผ่าน / สลากถูกคนอื่นซื้อตัด / หมดเวลาจอง",
+   "x": 6161.0,
+   "y": 3157.0,
+   "w": 336,
+   "h": 56,
+   "rank": 8,
+   "col": 5,
+   "line": 32
+  }
+ ],
+ "edges": [
+  {
+   "src": "s0",
+   "dst": "d1",
+   "type": "solid",
+   "label": "",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 500.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 18
+  },
+  {
+   "src": "d1",
+   "dst": "d2",
+   "type": "yes",
+   "label": "Yes",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 1200.0,
+   "label_pos": {
+    "x": 1353.0,
+    "y": 329.0,
+    "dist_from_exit": 100.0
+   },
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 19
+  },
+  {
+   "src": "d1",
+   "dst": "p1",
+   "type": "no",
+   "label": "No",
+   "out_anchor": "S0",
+   "in_anchor": "W0",
+   "length": 1180.0,
+   "label_pos": {
+    "x": 1141.0,
+    "y": 493.0,
+    "dist_from_exit": 100.0
+   },
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 20
+  },
+  {
+   "src": "p1",
+   "dst": "d2",
+   "type": "solid",
+   "label": "",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 1132.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 21
+  },
+  {
+   "src": "d2",
+   "dst": "d3",
+   "type": "yes",
+   "label": "Yes",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 1200.0,
+   "label_pos": {
+    "x": 2857.0,
+    "y": 329.0,
+    "dist_from_exit": 100.0
+   },
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 22
+  },
+  {
+   "src": "d2",
+   "dst": "p2",
+   "type": "no",
+   "label": "No",
+   "out_anchor": "S0",
+   "in_anchor": "W0",
+   "length": 2292.0,
+   "label_pos": {
+    "x": 2645.0,
+    "y": 493.0,
+    "dist_from_exit": 100.0
+   },
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 23
+  },
+  {
+   "src": "p2",
+   "dst": "d3",
+   "type": "solid",
+   "label": "",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 2244.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 24
+  },
+  {
+   "src": "d3",
+   "dst": "p4",
+   "type": "yes",
+   "label": "Yes",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 1200.0,
+   "label_pos": {
+    "x": 4361.0,
+    "y": 329.0,
+    "dist_from_exit": 100.0
+   },
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 25
+  },
+  {
+   "src": "d3",
+   "dst": "p3",
+   "type": "no",
+   "label": "No",
+   "out_anchor": "S0",
+   "in_anchor": "W0",
+   "length": 2848.0,
+   "label_pos": {
+    "x": 4149.0,
+    "y": 493.0,
+    "dist_from_exit": 100.0
+   },
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 26
+  },
+  {
+   "src": "p3",
+   "dst": "p4",
+   "type": "solid",
+   "label": "",
+   "out_anchor": "E0",
+   "in_anchor": "W1",
+   "length": 2798.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 27
+  },
+  {
+   "src": "p4",
+   "dst": "e1",
+   "type": "solid",
+   "label": "",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 556.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 28
+  },
+  {
+   "src": "p2",
+   "dst": "p1",
+   "type": "back",
+   "label": "",
+   "out_anchor": "N0",
+   "in_anchor": "E1",
+   "length": 2486.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 29
+  },
+  {
+   "src": "p1",
+   "dst": "l1",
+   "type": "solid",
+   "label": "",
+   "out_anchor": "E0",
+   "in_anchor": "W0",
+   "length": 1130.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 30
+  },
+  {
+   "src": "p4",
+   "dst": "p4__perm",
+   "type": "perm",
+   "label": "",
+   "out_anchor": "S0",
+   "in_anchor": "W0",
+   "length": 3428.0,
+   "label_pos": null,
+   "crosses": [],
+   "outside_canvas": false,
+   "line": 32
+  }
+ ]
+}
