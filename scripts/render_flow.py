@@ -85,6 +85,12 @@ IN_PREF = {
 }
 DEC_IN = ("W", 0)   # ทางเข้า Diamond รวมที่ปลายซ้ายเสมอ — Diamond มีเส้นออกได้แค่ Yes/No
 SLOT_FRAC = {0: 0.0, 1: 0.5, 2: -0.5}   # fanned attach points on one side
+
+# กฎจุดเชื่อมของทีมพูดถึง "รูปแบบเส้น" ที่ตาเห็น ไม่ใช่ความหมายของเส้น:
+# เส้นทึบ (ปกติ / Yes / No) หน้าตาเหมือนกัน จึงใช้จุดเดียวกันได้ — เป็นจุดรวมเส้น
+# เส้นประน้ำเงิน (ย้อนกลับ) กับเส้นประเหลือง (permutation) เป็นรูปแบบอื่น ต้องไปมุมอื่น
+STYLE = {EDGE_SOLID: "solid", EDGE_YES: "solid", EDGE_NO: "solid",
+         EDGE_BACK: "dashed", EDGE_PERM: "perm"}
 DIRV = {"N": (0, -1), "S": (0, 1), "E": (1, 0), "W": (-1, 0)}
 
 SHAPE = {  # node kind -> shape
@@ -430,29 +436,31 @@ def anchor_pt(n, side, slot=0):
 
 
 def pick_anchor(node, etype, pref, used, way):
-    """Same edge type going the same way may share one attach point — that is how
-    branches merge. Anything else has to move: first to another side, and only
-    when every side is taken, to a fanned point on a used side."""
+    """เลือกจุดเชื่อมตามกฎของทีม: เส้นรูปแบบเดียวกันและทิศเดียวกันใช้จุดเดียวกันได้
+    (จุดรวมเส้น) ส่วนเส้นคนละรูปแบบต้องไปเกาะ *ด้านอื่น* ของกล่อง — การขยับจุดบนด้านเดิม
+    ใช้เป็นทางออกสุดท้ายเมื่อทั้งสี่ด้านถูกรูปแบบอื่นจองไปหมดแล้ว"""
     reg = used.setdefault(node["id"], {})
-    mine = (etype, way)
-    for side in pref[etype]:                     # reuse a point already ours
+    style = STYLE[etype]
+    mine = (style, way)
+
+    def side_styles(side):
+        return {v[0] for k, v in reg.items() if k[0] == side}
+
+    for side in pref[etype]:                     # จุดที่เป็นของรูปแบบและทิศเดียวกันอยู่แล้ว
         for slot in (0, 1, 2):
             if reg.get((side, slot)) == mine:
                 return side, slot
-    if way == "in":
-        # ทางเข้าของทุกเส้นควรอยู่ด้านเดียวกัน (ด้านซ้ายใน layout ซ้าย→ขวา) เพื่อให้
-        # อ่านได้ว่า "เข้าทางนี้ ออกทางนั้น" — เส้นคนละประเภทจึงกระจายเป็นจุดคนละจุด
-        # บนด้านเดิม ดีกว่าย้ายไปเข้าด้านบนแล้ววิ่งตั้งผ่านแถวอื่น
-        side = pref[etype][0]
-        for slot in (0, 1, 2):
-            if (side, slot) not in reg:
-                reg[(side, slot)] = mine
-                return side, slot
-    for side in pref[etype]:                     # a completely free side
-        if not any((side, s) in reg for s in (0, 1, 2)):
+    for side in pref[etype]:                     # ด้านที่ยังไม่มีใครใช้
+        if not side_styles(side):
             reg[(side, 0)] = mine
             return side, 0
-    for side in pref[etype]:                     # fan out on a used side
+    for side in pref[etype]:                     # ด้านที่มีแต่รูปแบบเดียวกัน (คนละทิศ)
+        if side_styles(side) == {style}:
+            for slot in (0, 1, 2):
+                if (side, slot) not in reg:
+                    reg[(side, slot)] = mine
+                    return side, slot
+    for side in pref[etype]:                     # ทางออกสุดท้าย: แทรกจุดบนด้านที่ถูกใช้แล้ว
         for slot in (1, 2):
             if (side, slot) not in reg:
                 reg[(side, slot)] = mine
@@ -645,8 +653,9 @@ def render(src, out_path=None, title=None, tokens=None):
     for e in edges:
         s, t = nodes[e["src"]], nodes[e["dst"]]
         sa, ss = pick_anchor(s, e["type"], OUT_PREF, used, "out")
-        if SHAPE[t["kind"]] == "diamond":
-            ta, ts = DEC_IN          # ทางเข้ารวมที่ปลายซ้าย (ดู flow-rules G6)
+        if SHAPE[t["kind"]] == "diamond" and STYLE[e["type"]] == "solid":
+            ta, ts = DEC_IN          # เส้นทึบทุกเส้นรวมที่ปลายซ้าย (ดู flow-rules G6)
+            used.setdefault(t["id"], {})[(ta, ts)] = ("solid", "in")
         else:
             ta, ts = pick_anchor(t, e["type"], IN_PREF, used, "in")
         A, B = anchor_pt(s, sa, ss), anchor_pt(t, ta, ts)

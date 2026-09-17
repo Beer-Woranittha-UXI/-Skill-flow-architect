@@ -168,7 +168,9 @@ def check_geometry(meta):
         add(rows, "R0", "G5", f'padding = {g["pad_y"]}/{g["pad_x"]} — ทีมกำหนด 16 (บน-ล่าง) / 24 (ซ้าย-ขวา)', "tokens")
 
     kind = {n["id"]: n["kind"] for n in meta["nodes"]}
-    anchors = {}
+    # เทียบเป็น "รูปแบบเส้น" ที่ตาเห็น: ทึบ (ปกติ/Yes/No) · ประน้ำเงิน (ย้อนกลับ) · ประเหลือง
+    STYLE = {"solid": "ทึบ", "yes": "ทึบ", "no": "ทึบ", "back": "ประน้ำเงิน", "perm": "ประเหลือง"}
+    sides = {}
     for e in meta["edges"]:
         if e["length"] + 0.5 < sp["edge_min"]:
             add(rows, "R1", "G1", f'เส้นยาว {e["length"]}px — ทีมกำหนดเริ่มต้นที่ {sp["edge_min"]:.0f}px',
@@ -184,15 +186,18 @@ def check_geometry(meta):
         if e["crosses"]:
             add(rows, "R1", "G3", f'เส้นวิ่งทับกล่อง {", ".join(e["crosses"])} — '
                 "ย้ายลำดับ branch หรือเพิ่มระยะคอลัมน์", f'{e["src"]}→{e["dst"]}')
-        points = [(e["src"], e["out_anchor"], "out")]
-        if kind.get(e["dst"]) != "DEC":      # ทางเข้า Diamond รวมที่ปลายซ้ายโดยตั้งใจ
-            points.append((e["dst"], e["in_anchor"], "in"))
-        for node, side, _way in points:
-            owner = anchors.get((node, side))
-            if owner and owner != e["type"]:
-                add(rows, "R0", "G6", f'ด้าน {side} ของ {node} ถูกใช้โดยเส้นคนละประเภท '
-                    f'({owner} + {e["type"]}) — เส้นต่างประเภทต้องเชื่อมมุมอื่น', node)
-            anchors[(node, side)] = owner or e["type"]
+        st = STYLE[e["type"]]
+        points = [(e["src"], e["out_anchor"])]
+        if not (kind.get(e["dst"]) == "DEC" and st == "ทึบ"):
+            # ทางเข้า Diamond ของเส้นทึบรวมที่ปลายซ้ายโดยตั้งใจ (จุดรวมเส้น)
+            points.append((e["dst"], e["in_anchor"]))
+        for node, anchor in points:
+            side = anchor[0]                 # ตัดหมายเลขจุดออก เหลือด้าน
+            owner = sides.get((node, side))
+            if owner and owner != st:
+                add(rows, "R0", "G6", f'ด้าน {side} ของ {node} มีเส้นคนละรูปแบบมาเกาะ '
+                    f'({owner} + {st}) — เส้นคนละรูปแบบต้องเชื่อมที่มุมอื่นของกล่อง', node)
+            sides[(node, side)] = owner or st
 
     boxes = meta["nodes"]
     for e in meta["edges"]:
