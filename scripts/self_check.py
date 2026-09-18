@@ -16,7 +16,11 @@ Usage:
     python3 self_check.py flow.flow --meta f.meta.json   # + ตรวจ geometry ที่ render แล้ว
     python3 self_check.py flow.flow --json
 
-exit 1 เมื่อเจอ R0 — ใช้เป็น gate ก่อน hand-off ได้
+exit code — แยก "flow มีปัญหา" ออกจาก "รันไม่ได้" เพื่อให้ CI ใช้เป็น gate ได้
+    0  ตรวจจบ ไม่เจอ R0
+    1  ตรวจจบ เจอ R0 อย่างน้อย 1 ข้อ
+    2  ตรวจไม่ได้ — เปิดไฟล์ไม่ได้ หรือ syntax ผิด
+
 สคริปต์นี้ "ไม่แก้ให้" โดยเจตนา: มันบอกว่าอะไรผิด แล้วดีไซเนอร์เป็นคนตัดสินใจแก้
 """
 
@@ -34,10 +38,20 @@ from render_flow import (  # noqa: E402
 
 # หางคำถามที่ template ของ Amm กำหนด (references/flow-rules.md §2 กฎ S6)
 DEC_TAIL = ("ใช่หรือไม่?", "ใช่หรือไม่")
+# ตัดหางคำถามด้วย regex ไม่ใช่ endswith — หางต้องหลุดออกทุกตำแหน่ง
+# ถ้า S6 ไม่ผ่าน (เช่นข้อความยังมีวงเล็บ `<...>` ของแบบฟอร์มค้างอยู่) endswith จะตัดไม่ติด
+# แล้วคำว่า "หรือ" ในหางจะค้างใน stem ทำให้ S7 ยิงผิดตามมาทุกครั้ง
+DEC_TAIL_RE = re.compile(r"ใช่\s*หรือ\s*ไม่\s*\??")
 # คำเชื่อมที่บอกว่าข้าวหลามตัดอันเดียวถามหลายเรื่อง — ตรวจหลังตัดหางคำถามออก
-# ไม่งั้น "หรือ" ใน "ใช่หรือไม่?" จะติดทุกอัน
 MULTI = ["และ", "หรือ", " and ", " or ", "&"]
 OK_LABELS = {"yes", "no"}   # ป้ายทางออกที่ใช้ได้ มีแค่สองคำนี้ (กฎ S11)
+
+# ── ค่าที่ทีมล็อกไว้ (references/flow-rules.md §3 — G1 / G2) ──
+# validator เทียบกับค่านี้เสมอ ไม่ใช่กับค่าที่ไฟล์ประกาศผ่าน SPACING
+# ถ้าเทียบกับค่าที่ไฟล์ประกาศเอง ไฟล์จะปิดกฎของตัวเองได้เงียบ ๆ
+# (SPACING edge=60 → เส้น 60px แล้ว G1 ไม่ยิงเลย)
+TEAM_EDGE_MIN = 500.0       # ทุกเส้นยาวเริ่มต้นที่ 500px นับจากจุดที่เส้นวิ่งออก
+TEAM_LABEL_OFFSET = 100.0   # ป้าย Yes/No ห่างจากจุดที่เส้นวิ่งออก 100px
 
 
 def add(rows, sev, code, msg, where=""):
@@ -93,11 +107,7 @@ def check_source(nodes, order, edges):
             if not label.endswith(DEC_TAIL):
                 add(rows, "R0", "S6", "ข้อความ Decision ต้องจบด้วย “ใช่หรือไม่?” เท่านั้น → "
                     f"ปัจจุบัน: {label!r}", nid)
-            stem = label
-            for tail in DEC_TAIL:
-                if stem.endswith(tail):
-                    stem = stem[: -len(tail)]
-                    break
+            stem = DEC_TAIL_RE.sub("", label)
             for m in MULTI:
                 if m in f" {stem} ":
                     add(rows, "R1", "S7", f"หนึ่งข้าวหลามตัดถามได้หนึ่งเรื่อง — เจอ {m.strip()!r} "
@@ -301,6 +311,15 @@ def check_authorship(nodes, order, edges):
 
 
 def check_geometry(meta):
+    """ตรวจ geometry จาก .meta.json ที่ render_flow.py สร้าง
+
+    ขอบเขตที่ตรวจได้จริงต่างกันสองกลุ่ม — flow-rules.md §3 ระบุไว้ตรงกัน:
+
+      G1 G2 G3 G6 G7 G8 G9  ขึ้นกับผลการจัดวางของแต่ละใบ ยิงได้จริง
+      G4 G5                 renderer บังคับจากค่าคงที่ของตัวเอง ใบที่เพิ่ง render
+                            จึงผ่านเสมอ — เหลือไว้เป็นกันชนของ .meta.json
+                            ที่ค้างจาก renderer รุ่นเก่าหรือถูกแก้มือ
+    """
     rows = []
     g, sp = meta["geometry"], meta["spacing"]
     if g["radius"] != 16:
@@ -308,17 +327,24 @@ def check_geometry(meta):
     if (g["pad_y"], g["pad_x"]) != (16, 24):
         add(rows, "R0", "G5", f'padding = {g["pad_y"]}/{g["pad_x"]} — ทีมกำหนด 16 (บน-ล่าง) / 24 (ซ้าย-ขวา)', "tokens")
 
+    # ไฟล์ประกาศ SPACING ต่างจากค่าทีม — รายงานให้เห็น แล้วยังตรวจกับค่าทีมต่อข้างล่าง
+    if (sp["edge_min"], sp["label_offset"]) != (TEAM_EDGE_MIN, TEAM_LABEL_OFFSET):
+        add(rows, "R1", "G1", f'ไฟล์นี้ตั้ง SPACING เป็น edge={sp["edge_min"]:.0f} '
+            f'label={sp["label_offset"]:.0f} — ค่าที่ทีมล็อกไว้คือ '
+            f'{TEAM_EDGE_MIN:.0f} / {TEAM_LABEL_OFFSET:.0f} '
+            "ถ้าจำเป็นต้องใช้ค่าอื่นจริง ให้เขียนเหตุผลกำกับไว้ใน NOTE", "SPACING")
+
     kind = {n["id"]: n["kind"] for n in meta["nodes"]}
     # เทียบเป็น "รูปแบบเส้น" ที่ตาเห็น: ทึบ (ปกติ/Yes/No) · ประน้ำเงิน (ย้อนกลับ) · ประเหลือง
     STYLE = {"solid": "ทึบ", "yes": "ทึบ", "no": "ทึบ", "back": "ประน้ำเงิน", "perm": "ประเหลือง"}
     sides = {}
     for e in meta["edges"]:
-        if e["length"] + 0.5 < sp["edge_min"]:
-            add(rows, "R1", "G1", f'เส้นยาว {e["length"]}px — ทีมกำหนดเริ่มต้นที่ {sp["edge_min"]:.0f}px',
+        if e["length"] + 0.5 < TEAM_EDGE_MIN:
+            add(rows, "R1", "G1", f'เส้นยาว {e["length"]}px — ทีมกำหนดเริ่มต้นที่ {TEAM_EDGE_MIN:.0f}px',
                 f'{e["src"]}→{e["dst"]}')
-        if e["label_pos"] and abs(e["label_pos"]["dist_from_exit"] - sp["label_offset"]) > 1:
+        if e["label_pos"] and abs(e["label_pos"]["dist_from_exit"] - TEAM_LABEL_OFFSET) > 1:
             add(rows, "R2", "G2", f'ป้าย {e["label"]!r} อยู่ห่างจากจุดออก '
-                f'{e["label_pos"]["dist_from_exit"]}px — ทีมกำหนด {sp["label_offset"]:.0f}px '
+                f'{e["label_pos"]["dist_from_exit"]}px — ทีมกำหนด {TEAM_LABEL_OFFSET:.0f}px '
                 "(เส้นสั้นเกินไป ให้ยืดระยะ node)", f'{e["src"]}→{e["dst"]}')
         if e.get("outside_canvas"):
             add(rows, "R0", "G8", "เส้นวิ่งออกนอกกรอบ canvas แล้วถูกตัดหาย — "
@@ -385,6 +411,9 @@ def main():
         meta, _, nodes, order, edges = parse(a.src)
     except FlowError as e:
         print(f"⛔ อ่านไฟล์ไม่ผ่าน: {e}", file=sys.stderr)
+        sys.exit(2)
+    except OSError as e:
+        print(f"⛔ เปิดไฟล์ไม่ได้: {a.src} — {e.strerror}", file=sys.stderr)
         sys.exit(2)
 
     rows = check_draft_gate(meta, nodes, order)

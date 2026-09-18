@@ -12,14 +12,21 @@
 ## ติดตั้ง
 
 ```bash
-npx skills add Beer-Woranittha-UXI/-Skill--flow-architect
+npx skills add Beer-Woranittha-UXI/-Skill-flow-architect
 ```
 
 หรือ clone แล้ว symlink เข้า `~/.claude/skills/`
 
 ```bash
-git clone git@github.com:Beer-Woranittha-UXI/-Skill--flow-architect.git
-ln -s "$(pwd)/-Skill--flow-architect" ~/.claude/skills/flow-architect
+git clone git@github.com:Beer-Woranittha-UXI/-Skill-flow-architect.git
+ln -sfn "$(pwd)/-Skill-flow-architect" ~/.claude/skills/flow-architect
+```
+
+เช็คว่าติดตั้งถูกตัวแล้ว — เปิดเซสชันใหม่แล้วดูว่า `description` ของสกิลขึ้นต้นว่า
+"ตรวจ ตบ และ render Flowchart" · ถ้าขึ้นอย่างอื่นแปลว่า symlink ยังชี้ไปสำเนาเก่า
+
+```bash
+readlink ~/.claude/skills/flow-architect
 ```
 
 ต้องมี **Python 3.9+** เท่านั้น (stdlib ล้วน ไม่ต้องลง package)
@@ -46,7 +53,7 @@ python3 scripts/self_check.py  my-flow.flow      # -> R0 / R1 / R2
 | ไฟล์ | ทำหน้าที่ |
 |---|---|
 | `SKILL.md` | ตัวสั่งงาน — Gate + 6 ขั้นตอน ทุกขั้นมีเงื่อนไขจบที่ตรวจได้ |
-| `references/flow-rules.md` | กฎ 25 ข้อ (`S1`–`S14`, `G1`–`G8`) พร้อมเหตุผลทีละข้อ |
+| `references/flow-rules.md` | กฎ 31 ข้อ — รูปทรง `S1`–`S14` · geometry `G1`–`G9` · ที่มาของกล่อง `A1` `A2` · เคสพิเศษ `E1` `E2` · เกณฑ์รับร่างกับการวนรีวิว `D1` `V1` พร้อมเหตุผลทีละข้อ |
 | `references/review-protocol.md` | เส้นแบ่ง "ทำเองได้ / ต้องเสนอ" + โครงรายงาน 6 หัวข้อ |
 | `references/flow-dsl.md` | syntax ไฟล์ `.flow` + คำสั่ง CLI |
 | `references/style-guide.md` | token สี · ฟอนต์ · ดึง design.md ของโปรเจกต์ · วิธีส่งต่อ |
@@ -91,6 +98,10 @@ python3 scripts/self_check.py  my-flow.flow      # -> R0 / R1 / R2
 
 ## สถานะ
 
-`v1.6.0` · ตรวจด้วย `make-skill-great` แล้ว
-ยังค้าง: `baseline_failure` ใน `evals/` ยังเป็นคำทำนาย ต้องรันเทียบกับเซสชันที่ไม่โหลดสกิลก่อน
-และผู้ให้คะแนนต้องไม่ใช่คนเขียนสกิล
+`v1.6.2` · ตรวจสองรอบด้วย `make-skill-great` และผู้ตรวจอิสระที่ไม่รู้เกณฑ์ของอีกฝั่ง
+
+ยังค้าง
+- `evals/` ยังไม่มี runner — format ยังไม่ตรงกับ `claude plugin eval` ต้องรันเองให้คะแนนเอง
+- `evals/README.md` อ้างผลการให้คะแนนที่ `eval-run/` ซึ่งยังไม่ได้ commit เข้ามา
+- เกณฑ์ 2 ข้อที่ติดป้าย `[ต้องบีบเกณฑ์]` ถูกบีบแล้วแต่ยังไม่ได้วัดซ้ำ
+- `eval-01` กับ `eval-03` กรรมการปิดตาเลือกฝั่งที่**ไม่โหลดสกิล** — ยังไม่ได้แก้ที่ต้นเหตุ
