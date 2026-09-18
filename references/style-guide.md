@@ -4,13 +4,13 @@
 
 | token | ค่า | ใช้กับ |
 |---|---|---|
-| `primary` | `#3B5BDB` | พื้นของทุกกล่อง (Process, Diamond, Terminator, Link chip) + เส้นโยง |
+| `primary` | `#4060d0` | พื้นของทุกกล่อง (Process, Diamond, Terminator, Link chip) + เส้นโยง |
 | `ink` | `#17181C` | หัวเรื่อง / ข้อความบนพื้นขาว |
 | `muted` | `#6B7280` | header ย่อย, legend, ป้ายกลาง |
 | `paper` / `paper_2` | `#FFFFFF` / `#F7F8FB` | พื้นกล่อง / พื้นหลังหน้า |
-| `yes` | `#16A34A` | ป้าย Yes |
-| `no` | `#DC2626` | ป้าย No |
-| `perm` | `#F5B400` | เส้นประ + กล่อง note ของ Permutation |
+| `yes` | `#1b991e` | ป้าย Yes |
+| `no` | `#b82121` | ป้าย No |
+| `perm` | `#ffce2c` | เส้นประ + กล่อง note ของ Permutation |
 | `hairline` | `#E4E7EE` | เส้นคั่น card |
 
 ทุกกล่องเป็นพื้นน้ำเงินทึบ ตัวอักษรขาว — แยกประเภทด้วย **รูปทรง** ไม่ใช่สี

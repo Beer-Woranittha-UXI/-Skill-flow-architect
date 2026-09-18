@@ -9,9 +9,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --primary:#3B5BDB; --primary-d:#2F49AF; --ink:#17181C; --muted:#6B7280;
-    --paper:#FFFFFF; --paper-2:#F7F8FB; --yes:#16A34A; --no:#DC2626;
-    --perm:#F5B400; --hairline:#E4E7EE;
+    --primary:#4060d0; --primary-d:#334DA6; --ink:#17181C; --muted:#6B7280;
+    --paper:#FFFFFF; --paper-2:#F7F8FB; --yes:#1b991e; --no:#b82121;
+    --perm:#ffce2c; --hairline:#E4E7EE;
   }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--paper-2); color:var(--ink);
@@ -105,8 +105,8 @@
   .led-id { font-weight:700; white-space:nowrap; }
   .canvas { flex:1 1 auto; min-width:0; overflow:auto; background:var(--paper);
     border:1px solid var(--hairline); border-radius:16px; padding:8px; }
-  .zoomwrap { transform-origin:0 0; width:6722px; }
-  svg.flow { display:block; width:6722px; height:3438px; }
+  .zoomwrap { transform-origin:0 0; width:6650px; }
+  svg.flow { display:block; width:6650px; height:3510px; }
   .zoom { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
   .zoom button { font-family:inherit; font-size:12px; font-weight:600;
     color:var(--primary); background:var(--paper); border:1px solid var(--primary);
@@ -158,99 +158,100 @@
       <button data-z="fit" aria-pressed="true">พอดีจอ</button>
       <button data-z="0.5">50%</button>
       <button data-z="1">100% (ขนาดจริง)</button>
-      <span style="font-size:12px;color:var(--muted)">canvas 6722×3438px</span>
+      <span style="font-size:12px;color:var(--muted)">canvas 6650×3510px</span>
     </div>
     <div class="zoomwrap" id="zw">
-    <svg class="flow" viewBox="0 0 6722 3438" role="img" aria-labelledby="ttl dsc">
+    <svg class="flow" viewBox="0 0 6650 3510" role="img" aria-labelledby="ttl dsc">
       <title id="ttl">ซื้อลอตเตอรี่ (ตัวอย่างอ้างอิง)</title>
       <desc id="dsc">User flow diagram — ผู้ใช้ซื้อสลากที่เลือกไว้ได้สำเร็จ</desc>
       <defs>
         <marker id="arw" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
           markerHeight="7" orient="auto-start-reverse">
-          <path d="M2 1 L10 6 L2 11" fill="none" stroke="#3B5BDB" stroke-width="2.4"
+          <path d="M2 1 L10 6 L2 11" fill="none" stroke="#4060d0" stroke-width="2.4"
             stroke-linecap="round" stroke-linejoin="round"/>
         </marker>
         <marker id="arw-perm" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
           markerHeight="7" orient="auto-start-reverse">
-          <path d="M2 1 L10 6 L2 11" fill="none" stroke="#F5B400" stroke-width="2.4"
+          <path d="M2 1 L10 6 L2 11" fill="none" stroke="#ffce2c" stroke-width="2.4"
             stroke-linecap="round" stroke-linejoin="round"/>
         </marker>
       </defs>
-    <path class="e-solid" marker-end="url(#arw)" d="M 449.0 329.0 L 949.0 329.0"/>
-    <circle class="e-dot" cx="449.0" cy="329.0" r="6"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 1253.0 329.0 L 2453.0 329.0"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 1101.0 433.0 L 1101.0 477.0 A 16.0 16.0 0 0 0 1117.0 493.0 L 1562.0 493.0 A 16.0 16.0 0 0 1 1578.0 509.0 L 1578.0 945.0 A 16.0 16.0 0 0 0 1594.0 961.0 L 1753.0 961.0"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 1953.0 961.0 L 2262.0 961.0 A 16.0 16.0 0 0 0 2278.0 945.0 L 2278.0 345.0 A 16.0 16.0 0 0 1 2294.0 329.0 L 2453.0 329.0"/>
-    <circle class="e-dot" cx="1953.0" cy="961.0" r="6"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 2757.0 329.0 L 3957.0 329.0"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 2605.0 433.0 L 2605.0 477.0 A 16.0 16.0 0 0 0 2621.0 493.0 L 3066.0 493.0 A 16.0 16.0 0 0 1 3082.0 509.0 L 3082.0 2057.0 A 16.0 16.0 0 0 0 3098.0 2073.0 L 3257.0 2073.0"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 3457.0 2073.0 L 3766.0 2073.0 A 16.0 16.0 0 0 0 3782.0 2057.0 L 3782.0 345.0 A 16.0 16.0 0 0 1 3798.0 329.0 L 3957.0 329.0"/>
-    <circle class="e-dot" cx="3457.0" cy="2073.0" r="6"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 4261.0 329.0 L 5461.0 329.0"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 4109.0 433.0 L 4109.0 477.0 A 16.0 16.0 0 0 0 4125.0 493.0 L 4570.0 493.0 A 16.0 16.0 0 0 1 4586.0 509.0 L 4586.0 2613.0 A 16.0 16.0 0 0 0 4602.0 2629.0 L 4761.0 2629.0"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 4961.0 2629.0 L 5270.0 2629.0 A 16.0 16.0 0 0 0 5286.0 2613.0 L 5286.0 345.0 A 16.0 16.0 0 0 1 5302.0 329.0 L 5461.0 329.0"/>
-    <circle class="e-dot" cx="4961.0" cy="2629.0" r="6"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 5661.0 329.0 L 6217.0 329.0"/>
-    <circle class="e-dot" cx="5661.0" cy="329.0" r="6"/>
-    <path class="e-back" marker-end="url(#arw)" d="M 3357.0 2045.0 L 3357.0 1180.0 A 16.0 16.0 0 0 0 3341.0 1164.0 L 1869.0 1164.0 A 16.0 16.0 0 0 1 1853.0 1148.0 L 1853.0 989.0"/>
-    <circle class="e-dot" cx="3357.0" cy="2045.0" r="6"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 1953.0 961.0 L 2262.0 961.0 A 16.0 16.0 0 0 1 2278.0 977.0 L 2278.0 1501.0 A 16.0 16.0 0 0 0 2294.0 1517.0 L 2527.0 1517.0"/>
-    <circle class="e-dot" cx="1953.0" cy="961.0" r="6"/>
-    <path class="e-perm" marker-end="url(#arw-perm)" d="M 5561.0 357.0 L 5561.0 401.0 A 16.0 16.0 0 0 0 5577.0 417.0 L 5970.0 417.0 A 16.0 16.0 0 0 1 5986.0 433.0 L 5986.0 3169.0 A 16.0 16.0 0 0 0 6002.0 3185.0 L 6161.0 3185.0"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 449.0 365.0 L 949.0 365.0"/>
+    <circle class="e-dot" cx="449.0" cy="365.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 1229.0 365.0 L 2429.0 365.0"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 1089.0 505.0 L 1089.0 549.0 A 16.0 16.0 0 0 0 1105.0 565.0 L 1538.0 565.0 A 16.0 16.0 0 0 1 1554.0 581.0 L 1554.0 1017.0 A 16.0 16.0 0 0 0 1570.0 1033.0 L 1729.0 1033.0"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 1929.0 1033.0 L 2238.0 1033.0 A 16.0 16.0 0 0 0 2254.0 1017.0 L 2254.0 381.0 A 16.0 16.0 0 0 1 2270.0 365.0 L 2429.0 365.0"/>
+    <circle class="e-dot" cx="1929.0" cy="1033.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 2709.0 365.0 L 3909.0 365.0"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 2569.0 505.0 L 2569.0 549.0 A 16.0 16.0 0 0 0 2585.0 565.0 L 3018.0 565.0 A 16.0 16.0 0 0 1 3034.0 581.0 L 3034.0 2129.0 A 16.0 16.0 0 0 0 3050.0 2145.0 L 3209.0 2145.0"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 3409.0 2145.0 L 3718.0 2145.0 A 16.0 16.0 0 0 0 3734.0 2129.0 L 3734.0 381.0 A 16.0 16.0 0 0 1 3750.0 365.0 L 3909.0 365.0"/>
+    <circle class="e-dot" cx="3409.0" cy="2145.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 4189.0 365.0 L 5389.0 365.0"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 4049.0 505.0 L 4049.0 549.0 A 16.0 16.0 0 0 0 4065.0 565.0 L 4498.0 565.0 A 16.0 16.0 0 0 1 4514.0 581.0 L 4514.0 2685.0 A 16.0 16.0 0 0 0 4530.0 2701.0 L 4689.0 2701.0"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 4889.0 2701.0 L 5198.0 2701.0 A 16.0 16.0 0 0 0 5214.0 2685.0 L 5214.0 381.0 A 16.0 16.0 0 0 1 5230.0 365.0 L 5389.0 365.0"/>
+    <circle class="e-dot" cx="4889.0" cy="2701.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 5589.0 365.0 L 6145.0 365.0"/>
+    <circle class="e-dot" cx="5589.0" cy="365.0" r="6"/>
+    <path class="e-back" marker-end="url(#arw)" d="M 3309.0 2117.0 L 3309.0 1252.0 A 16.0 16.0 0 0 0 3293.0 1236.0 L 1845.0 1236.0 A 16.0 16.0 0 0 1 1829.0 1220.0 L 1829.0 1061.0"/>
+    <circle class="e-dot" cx="3309.0" cy="2117.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" d="M 1929.0 1033.0 L 2238.0 1033.0 A 16.0 16.0 0 0 1 2254.0 1049.0 L 2254.0 1573.0 A 16.0 16.0 0 0 0 2270.0 1589.0 L 2491.0 1589.0"/>
+    <circle class="e-dot" cx="1929.0" cy="1033.0" r="6"/>
+    <path class="e-perm" marker-end="url(#arw-perm)" d="M 5489.0 393.0 L 5489.0 437.0 A 16.0 16.0 0 0 0 5505.0 453.0 L 5898.0 453.0 A 16.0 16.0 0 0 1 5914.0 469.0 L 5914.0 3241.0 A 16.0 16.0 0 0 0 5930.0 3257.0 L 6089.0 3257.0"/>
     <g id="n-s0" class="node">
-      <rect class="n-oval" x="225.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
-      <text class="t-on" x="337.0" y="329.0" font-size="16">กดซื้อ</text>
+      <rect class="n-oval" x="225.0" y="337.0" width="224.0" height="56.0" rx="28.0"/>
+      <text class="t-on" x="337.0" y="365.0" font-size="16">กดซื้อ</text>
     </g>
     <g id="n-d1" class="node">
-      <path class="n-dia" d="M 1087.8 234.0 A 16.0 16.0 0 0 1 1114.2 234.0 L 1239.8 320.0 A 16.0 16.0 0 0 1 1239.8 338.0 L 1114.2 424.0 A 16.0 16.0 0 0 1 1087.8 424.0 L 962.2 338.0 A 16.0 16.0 0 0 1 962.2 320.0 Z"/>
-      <text class="t-on" x="1101.0" y="317.0" font-size="16">ล็อกอินแล้ว</text>
-      <text class="t-on" x="1101.0" y="341.0" font-size="16">ใช่หรือไม่?</text>
+      <path class="n-dia" d="M 1077.7 236.3 A 16.0 16.0 0 0 1 1100.3 236.3 L 1217.7 353.7 A 16.0 16.0 0 0 1 1217.7 376.3 L 1100.3 493.7 A 16.0 16.0 0 0 1 1077.7 493.7 L 960.3 376.3 A 16.0 16.0 0 0 1 960.3 353.7 Z"/>
+      <text class="t-on" x="1089.0" y="353.0" font-size="16">ล็อกอินแล้ว</text>
+      <text class="t-on" x="1089.0" y="377.0" font-size="16">ใช่หรือไม่?</text>
     </g>
     <g id="n-p1" class="node">
-      <rect class="n-rect" x="1753.0" y="933.0" width="200.0" height="56.0" rx="16"/>
-      <text class="t-on" x="1853.0" y="961.0" font-size="16">หน้าเข้าสู่ระบบ</text>
+      <rect class="n-rect" x="1729.0" y="1005.0" width="200.0" height="56.0" rx="16"/>
+      <text class="t-on" x="1829.0" y="1033.0" font-size="16">หน้าเข้าสู่ระบบ</text>
     </g>
     <g id="n-d2" class="node">
-      <path class="n-dia" d="M 2591.8 234.0 A 16.0 16.0 0 0 1 2618.2 234.0 L 2743.8 320.0 A 16.0 16.0 0 0 1 2743.8 338.0 L 2618.2 424.0 A 16.0 16.0 0 0 1 2591.8 424.0 L 2466.2 338.0 A 16.0 16.0 0 0 1 2466.2 320.0 Z"/>
-      <text class="t-on" x="2605.0" y="317.0" font-size="16">ยืนยันตัวตน (KYC)</text>
-      <text class="t-on" x="2605.0" y="341.0" font-size="16">แล้ว ใช่หรือไม่?</text>
+      <path class="n-dia" d="M 2557.7 236.3 A 16.0 16.0 0 0 1 2580.3 236.3 L 2697.7 353.7 A 16.0 16.0 0 0 1 2697.7 376.3 L 2580.3 493.7 A 16.0 16.0 0 0 1 2557.7 493.7 L 2440.3 376.3 A 16.0 16.0 0 0 1 2440.3 353.7 Z"/>
+      <text class="t-on" x="2569.0" y="341.0" font-size="16">ยืนยันตัวตน</text>
+      <text class="t-on" x="2569.0" y="365.0" font-size="16">(KYC) แล้ว</text>
+      <text class="t-on" x="2569.0" y="389.0" font-size="16">ใช่หรือไม่?</text>
     </g>
     <g id="n-p2" class="node">
-      <rect class="n-rect" x="3257.0" y="2045.0" width="200.0" height="56.0" rx="16"/>
-      <text class="t-on" x="3357.0" y="2073.0" font-size="16">หน้ายืนยันตัวตน</text>
+      <rect class="n-rect" x="3209.0" y="2117.0" width="200.0" height="56.0" rx="16"/>
+      <text class="t-on" x="3309.0" y="2145.0" font-size="16">หน้ายืนยันตัวตน</text>
     </g>
     <g id="n-d3" class="node">
-      <path class="n-dia" d="M 4095.8 234.0 A 16.0 16.0 0 0 1 4122.2 234.0 L 4247.8 320.0 A 16.0 16.0 0 0 1 4247.8 338.0 L 4122.2 424.0 A 16.0 16.0 0 0 1 4095.8 424.0 L 3970.2 338.0 A 16.0 16.0 0 0 1 3970.2 320.0 Z"/>
-      <text class="t-on" x="4109.0" y="305.0" font-size="16">ยอดเงินในกระ</text>
-      <text class="t-on" x="4109.0" y="329.0" font-size="16">เป๋าพอ</text>
-      <text class="t-on" x="4109.0" y="353.0" font-size="16">ใช่หรือไม่?</text>
+      <path class="n-dia" d="M 4037.7 236.3 A 16.0 16.0 0 0 1 4060.3 236.3 L 4177.7 353.7 A 16.0 16.0 0 0 1 4177.7 376.3 L 4060.3 493.7 A 16.0 16.0 0 0 1 4037.7 493.7 L 3920.3 376.3 A 16.0 16.0 0 0 1 3920.3 353.7 Z"/>
+      <text class="t-on" x="4049.0" y="341.0" font-size="16">ยอดเงินในกระ</text>
+      <text class="t-on" x="4049.0" y="365.0" font-size="16">เป๋าพอ</text>
+      <text class="t-on" x="4049.0" y="389.0" font-size="16">ใช่หรือไม่?</text>
     </g>
     <g id="n-p3" class="node">
-      <rect class="n-rect" x="4761.0" y="2601.0" width="200.0" height="56.0" rx="16"/>
-      <text class="t-on" x="4861.0" y="2629.0" font-size="16">หน้าเติมเงิน</text>
+      <rect class="n-rect" x="4689.0" y="2673.0" width="200.0" height="56.0" rx="16"/>
+      <text class="t-on" x="4789.0" y="2701.0" font-size="16">หน้าเติมเงิน</text>
     </g>
     <g id="n-p4" class="node">
-      <rect class="n-rect" x="5461.0" y="301.0" width="200.0" height="56.0" rx="16"/>
-      <text class="t-on" x="5561.0" y="329.0" font-size="16">หน้าชำระเงิน</text>
+      <rect class="n-rect" x="5389.0" y="337.0" width="200.0" height="56.0" rx="16"/>
+      <text class="t-on" x="5489.0" y="365.0" font-size="16">หน้าชำระเงิน</text>
     </g>
     <g id="n-e1" class="node">
-      <rect class="n-oval" x="6217.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
-      <text class="t-on" x="6329.0" y="329.0" font-size="16">ซื้อสำเร็จ</text>
+      <rect class="n-oval" x="6145.0" y="337.0" width="224.0" height="56.0" rx="28.0"/>
+      <text class="t-on" x="6257.0" y="365.0" font-size="16">ซื้อสำเร็จ</text>
     </g>
     <g id="n-l1" class="node">
-      <rect class="n-chip" x="2527.0" y="1489.0" width="156.0" height="56.0" rx="8"/>
-      <text class="t-on" x="2605.0" y="1517.0" font-size="16">Flow ยืนยัน OTP</text>
+      <rect class="n-chip" x="2491.0" y="1561.0" width="156.0" height="56.0" rx="8"/>
+      <text class="t-on" x="2569.0" y="1589.0" font-size="16">Flow ยืนยัน OTP</text>
     </g>
     <g id="n-p4__perm" class="node">
-      <rect class="n-note" x="6161.0" y="3157.0" width="336.0" height="56.0" rx="16"/>
-      <text class="t-note" x="6329.0" y="3185.0" font-size="13">ตัดเงินไม่ผ่าน / สลากถูกคนอื่นซื้อตัด / หมดเวลาจอง</text>
+      <rect class="n-note" x="6089.0" y="3229.0" width="336.0" height="56.0" rx="16"/>
+      <text class="t-note" x="6257.0" y="3257.0" font-size="13">ตัดเงินไม่ผ่าน / สลากถูกคนอื่นซื้อตัด / หมดเวลาจอง</text>
     </g>
-    <g class="edge-label"><rect x="1332.3" y="314.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="1353.0" y="329.0" font-size="13">Yes</text></g>
-    <g class="edge-label"><rect x="1123.7" y="478.0" width="34.6" height="30" rx="8"/><text class="l-no" x="1141.0" y="493.0" font-size="13">No</text></g>
-    <g class="edge-label"><rect x="2836.3" y="314.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="2857.0" y="329.0" font-size="13">Yes</text></g>
-    <g class="edge-label"><rect x="2627.7" y="478.0" width="34.6" height="30" rx="8"/><text class="l-no" x="2645.0" y="493.0" font-size="13">No</text></g>
-    <g class="edge-label"><rect x="4340.3" y="314.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="4361.0" y="329.0" font-size="13">Yes</text></g>
-    <g class="edge-label"><rect x="4131.7" y="478.0" width="34.6" height="30" rx="8"/><text class="l-no" x="4149.0" y="493.0" font-size="13">No</text></g>
+    <g class="edge-label"><rect x="1308.3" y="350.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="1329.0" y="365.0" font-size="13">Yes</text></g>
+    <g class="edge-label"><rect x="1111.7" y="550.0" width="34.6" height="30" rx="8"/><text class="l-no" x="1129.0" y="565.0" font-size="13">No</text></g>
+    <g class="edge-label"><rect x="2788.3" y="350.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="2809.0" y="365.0" font-size="13">Yes</text></g>
+    <g class="edge-label"><rect x="2591.7" y="550.0" width="34.6" height="30" rx="8"/><text class="l-no" x="2609.0" y="565.0" font-size="13">No</text></g>
+    <g class="edge-label"><rect x="4268.3" y="350.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="4289.0" y="365.0" font-size="13">Yes</text></g>
+    <g class="edge-label"><rect x="4071.7" y="550.0" width="34.6" height="30" rx="8"/><text class="l-no" x="4089.0" y="565.0" font-size="13">No</text></g>
     </svg>
     </div>
   </div>
@@ -269,7 +270,7 @@
 </main>
 <script>
   (function () {
-    var zw = document.getElementById('zw'), W = 6722, H = 3438;
+    var zw = document.getElementById('zw'), W = 6650, H = 3510;
     var wrap = zw.parentElement, mode = 'fit';
     function apply() {
       var k = mode === 'fit' ? Math.min(1, (wrap.clientWidth - 24) / W) : parseFloat(mode);
@@ -382,14 +383,14 @@
   "pad_y": 16,
   "pad_x": 24,
   "diamond": {
-   "w": 304,
-   "h": 208
+   "w": 280,
+   "h": 280
   },
   "elbow_r": 16
  },
  "canvas": {
-  "w": 6722,
-  "h": 3438
+  "w": 6650,
+  "h": 3510
  },
  "nodes": [
   {
@@ -397,7 +398,7 @@
    "kind": "START",
    "label": "กดซื้อ",
    "x": 225.0,
-   "y": 301.0,
+   "y": 337.0,
    "w": 224,
    "h": 56,
    "rank": 0,
@@ -411,8 +412,8 @@
    "label": "ล็อกอินแล้ว ใช่หรือไม่?",
    "x": 949.0,
    "y": 225.0,
-   "w": 304,
-   "h": 208,
+   "w": 280,
+   "h": 280,
    "rank": 1,
    "col": 0,
    "line": 8,
@@ -422,8 +423,8 @@
    "id": "p1",
    "kind": "PAGE",
    "label": "หน้าเข้าสู่ระบบ",
-   "x": 1753.0,
-   "y": 933.0,
+   "x": 1729.0,
+   "y": 1005.0,
    "w": 200,
    "h": 56,
    "rank": 2,
@@ -435,10 +436,10 @@
    "id": "d2",
    "kind": "DEC",
    "label": "ยืนยันตัวตน (KYC) แล้ว ใช่หรือไม่?",
-   "x": 2453.0,
+   "x": 2429.0,
    "y": 225.0,
-   "w": 304,
-   "h": 208,
+   "w": 280,
+   "h": 280,
    "rank": 3,
    "col": 0,
    "line": 10,
@@ -448,8 +449,8 @@
    "id": "p2",
    "kind": "PAGE",
    "label": "หน้ายืนยันตัวตน",
-   "x": 3257.0,
-   "y": 2045.0,
+   "x": 3209.0,
+   "y": 2117.0,
    "w": 200,
    "h": 56,
    "rank": 4,
@@ -461,10 +462,10 @@
    "id": "d3",
    "kind": "DEC",
    "label": "ยอดเงินในกระเป๋าพอ ใช่หรือไม่?",
-   "x": 3957.0,
+   "x": 3909.0,
    "y": 225.0,
-   "w": 304,
-   "h": 208,
+   "w": 280,
+   "h": 280,
    "rank": 5,
    "col": 0,
    "line": 12,
@@ -474,8 +475,8 @@
    "id": "p3",
    "kind": "PAGE",
    "label": "หน้าเติมเงิน",
-   "x": 4761.0,
-   "y": 2601.0,
+   "x": 4689.0,
+   "y": 2673.0,
    "w": 200,
    "h": 56,
    "rank": 6,
@@ -487,8 +488,8 @@
    "id": "p4",
    "kind": "PAGE",
    "label": "หน้าชำระเงิน",
-   "x": 5461.0,
-   "y": 301.0,
+   "x": 5389.0,
+   "y": 337.0,
    "w": 200,
    "h": 56,
    "rank": 7,
@@ -500,8 +501,8 @@
    "id": "e1",
    "kind": "END",
    "label": "ซื้อสำเร็จ",
-   "x": 6217.0,
-   "y": 301.0,
+   "x": 6145.0,
+   "y": 337.0,
    "w": 224,
    "h": 56,
    "rank": 8,
@@ -513,8 +514,8 @@
    "id": "l1",
    "kind": "LINK",
    "label": "Flow ยืนยัน OTP",
-   "x": 2527.0,
-   "y": 1489.0,
+   "x": 2491.0,
+   "y": 1561.0,
    "w": 156,
    "h": 56,
    "rank": 3,
@@ -526,8 +527,8 @@
    "id": "p4__perm",
    "kind": "PERMNOTE",
    "label": "ตัดเงินไม่ผ่าน / สลากถูกคนอื่นซื้อตัด / หมดเวลาจอง",
-   "x": 6161.0,
-   "y": 3157.0,
+   "x": 6089.0,
+   "y": 3229.0,
    "w": 336,
    "h": 56,
    "rank": 8,
@@ -560,8 +561,8 @@
    "in_anchor": "W0",
    "length": 1200.0,
    "label_pos": {
-    "x": 1353.0,
-    "y": 329.0,
+    "x": 1329.0,
+    "y": 365.0,
     "dist_from_exit": 100.0
    },
    "crosses": [],
@@ -576,10 +577,10 @@
    "label": "No",
    "out_anchor": "S0",
    "in_anchor": "W0",
-   "length": 1180.0,
+   "length": 1168.0,
    "label_pos": {
-    "x": 1141.0,
-    "y": 493.0,
+    "x": 1129.0,
+    "y": 565.0,
     "dist_from_exit": 100.0
    },
    "crosses": [],
@@ -594,7 +595,7 @@
    "label": "",
    "out_anchor": "E0",
    "in_anchor": "W0",
-   "length": 1132.0,
+   "length": 1168.0,
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
@@ -610,8 +611,8 @@
    "in_anchor": "W0",
    "length": 1200.0,
    "label_pos": {
-    "x": 2857.0,
-    "y": 329.0,
+    "x": 2809.0,
+    "y": 365.0,
     "dist_from_exit": 100.0
    },
    "crosses": [],
@@ -626,10 +627,10 @@
    "label": "No",
    "out_anchor": "S0",
    "in_anchor": "W0",
-   "length": 2292.0,
+   "length": 2280.0,
    "label_pos": {
-    "x": 2645.0,
-    "y": 493.0,
+    "x": 2609.0,
+    "y": 565.0,
     "dist_from_exit": 100.0
    },
    "crosses": [],
@@ -644,7 +645,7 @@
    "label": "",
    "out_anchor": "E0",
    "in_anchor": "W0",
-   "length": 2244.0,
+   "length": 2280.0,
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
@@ -660,8 +661,8 @@
    "in_anchor": "W0",
    "length": 1200.0,
    "label_pos": {
-    "x": 4361.0,
-    "y": 329.0,
+    "x": 4289.0,
+    "y": 365.0,
     "dist_from_exit": 100.0
    },
    "crosses": [],
@@ -676,10 +677,10 @@
    "label": "No",
    "out_anchor": "S0",
    "in_anchor": "W0",
-   "length": 2848.0,
+   "length": 2836.0,
    "label_pos": {
-    "x": 4149.0,
-    "y": 493.0,
+    "x": 4089.0,
+    "y": 565.0,
     "dist_from_exit": 100.0
    },
    "crosses": [],
@@ -694,7 +695,7 @@
    "label": "",
    "out_anchor": "E0",
    "in_anchor": "W0",
-   "length": 2800.0,
+   "length": 2836.0,
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
@@ -722,7 +723,7 @@
    "label": "",
    "out_anchor": "N0",
    "in_anchor": "S0",
-   "length": 2560.0,
+   "length": 2536.0,
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
@@ -736,7 +737,7 @@
    "label": "",
    "out_anchor": "E0",
    "in_anchor": "W0",
-   "length": 1130.0,
+   "length": 1118.0,
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
@@ -750,7 +751,7 @@
    "label": "",
    "out_anchor": "S0",
    "in_anchor": "W0",
-   "length": 3428.0,
+   "length": 3464.0,
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
