@@ -1879,7 +1879,7 @@ HTML_TMPL = """<!DOCTYPE html>
   /* แถบเครื่องมืออยู่ใต้ผัง เต็มความกว้าง — อยู่ในกรอบผังแล้วมันโดนบีบเป็น
      คอลัมน์แคบ เพราะกรอบนั้นเป็นที่เลื่อนของ canvas ที่กว้างหลายหมื่น px */
   .zoom {{ flex:1 0 100%; display:flex; flex-wrap:wrap; gap:8px;
-    align-items:center; margin:12px 0 0; }}
+    align-items:center; margin:0 0 12px; }}
   .zoom button {{ font-family:inherit; font-size:12px; font-weight:600;
     color:var(--primary); background:var(--paper); border:1px solid var(--primary);
     border-radius:8px; padding:6px 12px; cursor:pointer; }}
@@ -1937,29 +1937,6 @@ HTML_TMPL = """<!DOCTYPE html>
   </div>
 </header>
 <main>
-  <div class="canvas" id="cv">
-    <div class="zoomwrap" id="zw">
-    <svg class="flow" viewBox="0 0 {W} {H}" role="img" aria-labelledby="ttl dsc">
-      <title id="ttl">{flow}</title>
-      <desc id="dsc">User flow diagram — {goal}</desc>
-      <defs>
-        <marker id="arw" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
-          markerHeight="7" orient="auto-start-reverse">
-          <path d="M2 1 L10 6 L2 11" fill="none" stroke="{t_primary}" stroke-width="2.4"
-            stroke-linecap="round" stroke-linejoin="round"/>
-        </marker>
-        <marker id="arw-perm" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
-          markerHeight="7" orient="auto-start-reverse">
-          <path d="M2 1 L10 6 L2 11" fill="none" stroke="{t_perm}" stroke-width="2.4"
-            stroke-linecap="round" stroke-linejoin="round"/>
-        </marker>
-      </defs>
-    {edges}
-    {nodes}
-    {labels}
-    </svg>
-    </div>
-  </div>
   <div class="zoom" role="group" aria-label="เครื่องมือผัง">
     <button id="z-out" title="ย่อ (Ctrl/⌘ -)" aria-label="ย่อ">−</button>
     <span class="hint" id="z-now">100%</span>
@@ -1986,6 +1963,29 @@ HTML_TMPL = """<!DOCTYPE html>
       <button id="ed-ch-dl">ดาวน์โหลด .flow ที่แก้แล้ว</button>
       <span>ย้ายปลายเส้น = เปลี่ยนความหมายของ flow — ต้องเอาไปแก้ใน .flow แล้ว render ใหม่</span>
     </div>
+  <div class="canvas" id="cv">
+    <div class="zoomwrap" id="zw">
+    <svg class="flow" viewBox="0 0 {W} {H}" role="img" aria-labelledby="ttl dsc">
+      <title id="ttl">{flow}</title>
+      <desc id="dsc">User flow diagram — {goal}</desc>
+      <defs>
+        <marker id="arw" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
+          markerHeight="7" orient="auto-start-reverse">
+          <path d="M2 1 L10 6 L2 11" fill="none" stroke="{t_primary}" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arw-perm" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
+          markerHeight="7" orient="auto-start-reverse">
+          <path d="M2 1 L10 6 L2 11" fill="none" stroke="{t_perm}" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+    {edges}
+    {nodes}
+    {labels}
+    </svg>
+    </div>
+  </div>
   </div>
   {legend}
   {report}
