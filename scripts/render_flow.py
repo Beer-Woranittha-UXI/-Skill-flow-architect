@@ -1323,6 +1323,12 @@ def main():
     except FlowError as e:
         print(f"✖ {e}", file=sys.stderr)
         sys.exit(2)
+    except OSError as e:
+        print(f"✖ เปิดไฟล์ไม่ได้: {e.filename or a.src} — {e.strerror}", file=sys.stderr)
+        sys.exit(2)
+    except json.JSONDecodeError as e:
+        print(f"✖ อ่านไฟล์ token ไม่ออก: {a.tokens} — {e}", file=sys.stderr)
+        sys.exit(2)
     print(f"✔ {out}")
     print(f"  {len(m['nodes'])} nodes · {len(m['edges'])} edges · "
           f"canvas {m['canvas']['w']}×{m['canvas']['h']} · "
