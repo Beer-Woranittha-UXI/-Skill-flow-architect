@@ -159,6 +159,37 @@ def check_source(nodes, order, edges):
     return rows
 
 
+def check_coverage(nodes, order, edges):
+    """E1/E2 — เคสพิเศษ (edge case · error state · empty state) ยังไม่ถูกปิด
+
+    ตรวจได้เท่าที่เห็นจากโครงสร้าง: หน้าไหนยังไม่มี PERM ผูกอยู่
+    ส่วนเนื้อในว่าเคสที่ขาดคืออะไร เป็นหน้าที่ของ §4 ในรายงาน ไม่ใช่ของเครื่อง
+    """
+    rows = []
+    pages = [n for n in order if nodes[n]["kind"] == "PAGE"]
+    if not pages:
+        return rows
+    has_perm = {n for n in order if nodes[n].get("has_perm")}
+
+    if not has_perm:
+        add(rows, "R1", "E1",
+            f"ทั้งใบมี {len(pages)} หน้า แต่ยังไม่มีหน้าไหนผูกเคสพิเศษไว้เลย — "
+            "ไล่ดู edge case / error state / empty state ทีละหน้าก่อนส่ง "
+            "(ใช้ PERM <id> <เคส>)")
+        return rows
+
+    # หน้าที่ผู้ใช้ถูกส่งมาเพราะเงื่อนไขไม่ผ่าน = ทางพลาด มักมีเคสค้างมากที่สุด
+    fail_pages = [e["dst"] for e in edges
+                  if e["type"] == EDGE_NO and nodes[e["dst"]]["kind"] == "PAGE"]
+    naked = [n for n in dict.fromkeys(fail_pages) if n not in has_perm]
+    if naked:
+        add(rows, "R2", "E2",
+            f"หน้าทางพลาด {len(naked)} หน้ายังไม่มีเคสพิเศษ — "
+            "หน้าที่ผู้ใช้ถูกส่งมาเพราะเงื่อนไขไม่ผ่าน มักมีทั้งกรณีทำไม่สำเร็จซ้ำ "
+            "และกรณีข้อมูลว่าง", ", ".join(naked))
+    return rows
+
+
 AI_LIMIT = 0.40
 
 
@@ -276,6 +307,7 @@ def main():
 
     rows = check_source(nodes, order, edges)
     rows += check_authorship(nodes, order, edges)
+    rows += check_coverage(nodes, order, edges)
     meta_path = a.meta
     if not meta_path:
         guess = os.path.splitext(a.src)[0] + ".meta.json"
@@ -289,9 +321,12 @@ def main():
     else:
         counts = {s: sum(1 for r in rows if r["sev"] == s) for s in ("R0", "R1", "R2")}
         real = [n for n in order if nodes[n]["kind"] != "PERMNOTE"]
+        pages = [n for n in order if nodes[n]["kind"] == "PAGE"]
+        covered = [n for n in pages if nodes[n].get("has_perm")]
+        cov = f" · เคสพิเศษ {len(covered)}/{len(pages)} หน้า" if pages else ""
         print(f"\nตรวจ {os.path.basename(a.src)} — "
               f'{len(real)} กล่อง / {len(edges)} เส้น   '
-              f'R0={counts["R0"]}  R1={counts["R1"]}  R2={counts["R2"]}')
+              f'R0={counts["R0"]}  R1={counts["R1"]}  R2={counts["R2"]}{cov}')
         print("-" * 78)
         for r in rows:
             where = f' [{r["where"]}]' if r["where"] else ""
