@@ -670,7 +670,9 @@ def node_svg(n):
     for i, l in enumerate(lines):
         out.append(f'<text class="{cls}" x="{n["cx"]:.1f}" y="{top + i*LINE_H:.1f}" '
                    f'font-size="{fs}">{esc(l)}</text>')
-    return "\n    ".join(out)
+    inner = "\n      ".join(out)
+    return (f'<g id="n-{esc(n["id"])}" class="node">\n      '
+            f'{inner}\n    </g>')
 
 
 # -------------------------------------------------------------------- render ----
@@ -748,6 +750,7 @@ def render(src, out_path=None, title=None, tokens=None):
 
     legend = LEGEND_HTML
     ledger = build_ledger(flow_meta)
+    report = build_report(run_checks(nodes, order, edges, flow_meta), nodes)
     head = title or flow_meta["flow"] or "User Flow"
     svg_nodes = "\n    ".join(node_svg(nodes[i]) for i in order)
     out_path = out_path or os.path.splitext(src)[0] + ".html"
@@ -783,7 +786,7 @@ def render(src, out_path=None, title=None, tokens=None):
         title=esc(head), flow=esc(flow_meta["flow"]),
         goal=esc(meta["GOAL"]), owner=esc(meta["OWNER"]), date=esc(meta["DATE"]),
         note=esc(meta["NOTE"]),
-        W=round(W), H=round(H), legend=legend, ledger=ledger,
+        W=round(W), H=round(H), legend=legend, ledger=ledger, report=report,
         edges="\n    ".join(edge_svg), labels="\n    ".join(label_svg),
         nodes=svg_nodes, meta=json.dumps(flow_meta, ensure_ascii=False, indent=1),
         counts=f"{len([n for n in order if not n.endswith('__perm')])} กล่อง · "
@@ -872,6 +875,68 @@ def write_png(square_svg, png_path, W, H, side, px):
     return png_path
 
 
+SEV_LABEL = {"R0": "ต้องแก้ก่อนส่ง", "R1": "ควรแก้", "R2": "ข้อสังเกต"}
+
+
+def run_checks(nodes, order, edges, flow_meta):
+    """เรียก self_check.py ตัวจริงมาใช้ — กฎมีที่เดียว ไม่เขียนซ้ำในนี้
+
+    import ข้างในฟังก์ชันเพราะ self_check import จากไฟล์นี้ (กัน circular import)
+    """
+    try:
+        import self_check as sc
+    except ImportError:
+        return None
+    rows = sc.check_source(nodes, order, edges)
+    rows += sc.check_authorship(nodes, order, edges)
+    rows += sc.check_coverage(nodes, order, edges)
+    rows += sc.check_geometry(flow_meta)
+    rows.sort(key=lambda r: (sc.SEV_ORDER[r["sev"]], r["code"]))
+    return rows
+
+
+def build_report(rows, nodes):
+    """บล็อกผลตรวจใต้ผัง — คลิกชื่อกล่องแล้วกระโดดไปหาบนผังได้"""
+    if rows is None:
+        return ""
+    counts = {s: sum(1 for r in rows if r["sev"] == s) for s in ("R0", "R1", "R2")}
+    pills = "".join(
+        f'<span class="rp-pill rp-p{s.lower()}">{s} {counts[s]}</span>'
+        for s in ("R0", "R1", "R2"))
+
+    if not rows:
+        body = '<p class="rp-ok">ผ่านทุกข้อ — ไม่มีอะไรค้าง</p>'
+    else:
+        items = []
+        for r in rows:
+            targets = [w.strip() for w in str(r["where"]).split(",") if w.strip()]
+            chips = "".join(
+                f'<button class="rp-go" data-go="n-{esc(t)}" type="button">'
+                f'{esc(nodes[t]["label"])}</button>'
+                for t in targets if t in nodes)
+            if chips:
+                where = f'<div class="rp-where">{chips}</div>'
+            elif r["where"]:
+                where = f'<div class="rp-where rp-plain">{esc(str(r["where"]))}</div>'
+            else:
+                where = ""
+            items.append(
+                f'<li class="rp-item rp-i{r["sev"].lower()}">'
+                f'<div class="rp-head"><span class="rp-sev">{r["sev"]}</span>'
+                f'<span class="rp-code">{esc(r["code"])}</span>'
+                f'<span class="rp-sevname">{SEV_LABEL[r["sev"]]}</span></div>'
+                f'<div class="rp-msg">{esc(r["msg"])}</div>{where}</li>')
+        body = '<ul class="rp-list">' + "".join(items) + "</ul>"
+
+    return ('\n      <div class="rp">\n'
+            '        <div class="rp-t">ผลตรวจกฎ</div>\n'
+            f'        <div class="rp-pills">{pills}</div>\n'
+            f'        {body}\n'
+            '        <p class="rp-foot">รหัสกฎอ้างอิงจาก <code>flow-rules.md</code> — '
+            'R0 ต้องแก้ก่อนส่ง · R1 ควรแก้ · R2 ดีไซเนอร์ตัดสินใจ</p>\n'
+            '      </div>')
+
+
 LEDGER_LIMIT = 0.40
 
 
@@ -952,7 +1017,8 @@ HTML_TMPL = """<!DOCTYPE html>
   }}
   * {{ box-sizing: border-box; }}
   body {{ margin:0; background:var(--paper-2); color:var(--ink);
-    font-family:'Sarabun',-apple-system,'Helvetica Neue',sans-serif; }}
+    font-family:'Sarabun','Noto Sans Thai','IBM Plex Sans Thai',-apple-system,
+      'Thonburi','Helvetica Neue',sans-serif; }}
   header {{ position:sticky; top:0; z-index:5; background:var(--paper);
     border-bottom:1px solid var(--hairline); padding:20px 28px; }}
   h1 {{ font-size:20px; margin:0 0 4px; font-weight:700; }}
@@ -967,6 +1033,40 @@ HTML_TMPL = """<!DOCTYPE html>
   .lg-i {{ display:flex; gap:12px; align-items:center; margin:12px 0; font-size:12px;
     color:var(--muted); line-height:1.4; }}
   .lg-i svg {{ flex:0 0 54px; }}
+  .rp {{ flex:1 0 100%; background:var(--paper); border:1px solid var(--hairline);
+    border-radius:16px; padding:16px 24px; }}
+  .rp-t {{ font-weight:700; font-size:15px; margin-bottom:12px;
+    border-bottom:2px solid var(--ink); display:inline-block; padding-bottom:2px; }}
+  .rp-pills {{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }}
+  .rp-pill {{ font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px;
+    border:1px solid var(--hairline); color:var(--muted); }}
+  .rp-pr0 {{ color:var(--no); border-color:var(--no); }}
+  .rp-pr1 {{ color:#B26A00; border-color:#E3B872; }}
+  .rp-ok {{ font-size:14px; color:var(--yes); font-weight:700; margin:0; }}
+  .rp-list {{ list-style:none; margin:0; padding:0; display:flex;
+    flex-direction:column; gap:10px; }}
+  .rp-item {{ border-left:3px solid var(--hairline); padding:2px 0 2px 14px; }}
+  .rp-ir0 {{ border-left-color:var(--no); }}
+  .rp-ir1 {{ border-left-color:#E3B872; }}
+  .rp-head {{ display:flex; gap:8px; align-items:baseline; flex-wrap:wrap;
+    font-size:12px; }}
+  .rp-sev {{ font-weight:700; }}
+  .rp-code {{ font-weight:700; color:var(--primary); }}
+  .rp-sevname {{ color:var(--muted); }}
+  .rp-msg {{ font-size:13.5px; line-height:1.6; margin-top:2px; }}
+  .rp-where {{ display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }}
+  .rp-plain {{ font-size:12px; color:var(--muted); }}
+  .rp-go {{ font:inherit; font-size:12px; font-weight:600; cursor:pointer;
+    background:var(--paper_2); color:var(--primary); border:1px solid var(--hairline);
+    border-radius:999px; padding:3px 11px; }}
+  .rp-go:hover {{ border-color:var(--primary); }}
+  .rp-go:focus-visible {{ outline:2px solid var(--primary); outline-offset:2px; }}
+  .rp-foot {{ font-size:12px; color:var(--muted); margin:14px 0 0; }}
+  .node.hit rect, .node.hit path {{ stroke:var(--ink); stroke-width:6; }}
+  @media (prefers-reduced-motion:no-preference) {{
+    .node.hit rect, .node.hit path {{ animation:hit 1.1s ease-out; }}
+    @keyframes hit {{ 0%,60% {{ stroke-opacity:1; }} 100% {{ stroke-opacity:0; }} }}
+  }}
   .led {{ flex:1 0 100%; background:var(--paper); border:1px solid var(--hairline);
     border-radius:16px; padding:16px 24px; }}
   .led-t {{ font-weight:700; font-size:15px; margin-bottom:12px;
@@ -996,7 +1096,8 @@ HTML_TMPL = """<!DOCTYPE html>
   .n-rect, .n-oval, .n-chip, .n-dia {{ fill:var(--primary); stroke:none; }}
   .n-note {{ fill:#FFFBEC; stroke:var(--perm); stroke-width:2; stroke-dasharray:8 6; }}
   text {{ text-anchor:middle; dominant-baseline:central; font-weight:600;
-    font-family:'Sarabun',sans-serif; }}
+    font-family:'Sarabun','Noto Sans Thai','IBM Plex Sans Thai','Thonburi',
+      sans-serif; }}
   .t-on {{ fill:#fff; }} .t-ink {{ fill:var(--ink); }} .t-note {{ fill:#8A6100; }}
   .e-solid {{ fill:none; stroke:var(--primary); stroke-width:3; }}
   .e-back {{ fill:none; stroke:var(--primary); stroke-width:3; stroke-dasharray:9 8; }}
@@ -1052,6 +1153,7 @@ HTML_TMPL = """<!DOCTYPE html>
     </svg>
     </div>
   </div>
+  {report}
   {ledger}
 </main>
 <script>
@@ -1073,6 +1175,27 @@ HTML_TMPL = """<!DOCTYPE html>
       }});
     }});
     addEventListener('resize', function () {{ if (mode === 'fit') apply(); }});
+
+    // คลิกชื่อกล่องในผลตรวจ แล้วเลื่อนผังไปหากล่องนั้น + กะพริบให้เห็น
+    document.querySelectorAll('.rp-go').forEach(function (b) {{
+      b.addEventListener('click', function () {{
+        var g = document.getElementById(b.dataset.go);
+        var box = document.querySelector('.canvas');
+        if (!g || !box) return;
+        var r = g.getBoundingClientRect(), c = box.getBoundingClientRect();
+        box.scrollTo({{
+          left: box.scrollLeft + (r.left - c.left) - (c.width - r.width) / 2,
+          top: box.scrollTop + (r.top - c.top) - (c.height - r.height) / 2,
+          behavior: 'smooth'
+        }});
+        document.querySelectorAll('.node.hit').forEach(function (o) {{
+          o.classList.remove('hit');
+        }});
+        void g.getBoundingClientRect();
+        g.classList.add('hit');
+        setTimeout(function () {{ g.classList.remove('hit'); }}, 1200);
+      }});
+    }});
     apply();
   }})();
 </script>

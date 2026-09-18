@@ -15,7 +15,8 @@
   }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--paper-2); color:var(--ink);
-    font-family:'Sarabun',-apple-system,'Helvetica Neue',sans-serif; }
+    font-family:'Sarabun','Noto Sans Thai','IBM Plex Sans Thai',-apple-system,
+      'Thonburi','Helvetica Neue',sans-serif; }
   header { position:sticky; top:0; z-index:5; background:var(--paper);
     border-bottom:1px solid var(--hairline); padding:20px 28px; }
   h1 { font-size:20px; margin:0 0 4px; font-weight:700; }
@@ -30,6 +31,40 @@
   .lg-i { display:flex; gap:12px; align-items:center; margin:12px 0; font-size:12px;
     color:var(--muted); line-height:1.4; }
   .lg-i svg { flex:0 0 54px; }
+  .rp { flex:1 0 100%; background:var(--paper); border:1px solid var(--hairline);
+    border-radius:16px; padding:16px 24px; }
+  .rp-t { font-weight:700; font-size:15px; margin-bottom:12px;
+    border-bottom:2px solid var(--ink); display:inline-block; padding-bottom:2px; }
+  .rp-pills { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .rp-pill { font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px;
+    border:1px solid var(--hairline); color:var(--muted); }
+  .rp-pr0 { color:var(--no); border-color:var(--no); }
+  .rp-pr1 { color:#B26A00; border-color:#E3B872; }
+  .rp-ok { font-size:14px; color:var(--yes); font-weight:700; margin:0; }
+  .rp-list { list-style:none; margin:0; padding:0; display:flex;
+    flex-direction:column; gap:10px; }
+  .rp-item { border-left:3px solid var(--hairline); padding:2px 0 2px 14px; }
+  .rp-ir0 { border-left-color:var(--no); }
+  .rp-ir1 { border-left-color:#E3B872; }
+  .rp-head { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap;
+    font-size:12px; }
+  .rp-sev { font-weight:700; }
+  .rp-code { font-weight:700; color:var(--primary); }
+  .rp-sevname { color:var(--muted); }
+  .rp-msg { font-size:13.5px; line-height:1.6; margin-top:2px; }
+  .rp-where { display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }
+  .rp-plain { font-size:12px; color:var(--muted); }
+  .rp-go { font:inherit; font-size:12px; font-weight:600; cursor:pointer;
+    background:var(--paper_2); color:var(--primary); border:1px solid var(--hairline);
+    border-radius:999px; padding:3px 11px; }
+  .rp-go:hover { border-color:var(--primary); }
+  .rp-go:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+  .rp-foot { font-size:12px; color:var(--muted); margin:14px 0 0; }
+  .node.hit rect, .node.hit path { stroke:var(--ink); stroke-width:6; }
+  @media (prefers-reduced-motion:no-preference) {
+    .node.hit rect, .node.hit path { animation:hit 1.1s ease-out; }
+    @keyframes hit { 0%,60% { stroke-opacity:1; } 100% { stroke-opacity:0; } }
+  }
   .led { flex:1 0 100%; background:var(--paper); border:1px solid var(--hairline);
     border-radius:16px; padding:16px 24px; }
   .led-t { font-weight:700; font-size:15px; margin-bottom:12px;
@@ -59,7 +94,8 @@
   .n-rect, .n-oval, .n-chip, .n-dia { fill:var(--primary); stroke:none; }
   .n-note { fill:#FFFBEC; stroke:var(--perm); stroke-width:2; stroke-dasharray:8 6; }
   text { text-anchor:middle; dominant-baseline:central; font-weight:600;
-    font-family:'Sarabun',sans-serif; }
+    font-family:'Sarabun','Noto Sans Thai','IBM Plex Sans Thai','Thonburi',
+      sans-serif; }
   .t-on { fill:#fff; } .t-ink { fill:var(--ink); } .t-note { fill:#8A6100; }
   .e-solid { fill:none; stroke:var(--primary); stroke-width:3; }
   .e-back { fill:none; stroke:var(--primary); stroke-width:3; stroke-dasharray:9 8; }
@@ -140,32 +176,54 @@
     <path class="e-solid" marker-end="url(#arw)" d="M 1953.0 961.0 L 2262.0 961.0 A 16.0 16.0 0 0 1 2278.0 977.0 L 2278.0 1501.0 A 16.0 16.0 0 0 0 2294.0 1517.0 L 2527.0 1517.0"/>
     <circle class="e-dot" cx="1953.0" cy="961.0" r="6"/>
     <path class="e-perm" marker-end="url(#arw-perm)" d="M 5561.0 357.0 L 5561.0 401.0 A 16.0 16.0 0 0 0 5577.0 417.0 L 5970.0 417.0 A 16.0 16.0 0 0 1 5986.0 433.0 L 5986.0 3169.0 A 16.0 16.0 0 0 0 6002.0 3185.0 L 6161.0 3185.0"/>
-    <rect class="n-oval" x="225.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
-    <text class="t-on" x="337.0" y="329.0" font-size="16">กดซื้อ</text>
-    <path class="n-dia" d="M 1087.8 234.0 A 16.0 16.0 0 0 1 1114.2 234.0 L 1239.8 320.0 A 16.0 16.0 0 0 1 1239.8 338.0 L 1114.2 424.0 A 16.0 16.0 0 0 1 1087.8 424.0 L 962.2 338.0 A 16.0 16.0 0 0 1 962.2 320.0 Z"/>
-    <text class="t-on" x="1101.0" y="317.0" font-size="16">ล็อกอินแล้ว</text>
-    <text class="t-on" x="1101.0" y="341.0" font-size="16">ใช่หรือไม่?</text>
-    <rect class="n-rect" x="1753.0" y="933.0" width="200.0" height="56.0" rx="16"/>
-    <text class="t-on" x="1853.0" y="961.0" font-size="16">หน้าเข้าสู่ระบบ</text>
-    <path class="n-dia" d="M 2591.8 234.0 A 16.0 16.0 0 0 1 2618.2 234.0 L 2743.8 320.0 A 16.0 16.0 0 0 1 2743.8 338.0 L 2618.2 424.0 A 16.0 16.0 0 0 1 2591.8 424.0 L 2466.2 338.0 A 16.0 16.0 0 0 1 2466.2 320.0 Z"/>
-    <text class="t-on" x="2605.0" y="317.0" font-size="16">ยืนยันตัวตน (KYC)</text>
-    <text class="t-on" x="2605.0" y="341.0" font-size="16">แล้ว ใช่หรือไม่?</text>
-    <rect class="n-rect" x="3257.0" y="2045.0" width="200.0" height="56.0" rx="16"/>
-    <text class="t-on" x="3357.0" y="2073.0" font-size="16">หน้ายืนยันตัวตน</text>
-    <path class="n-dia" d="M 4095.8 234.0 A 16.0 16.0 0 0 1 4122.2 234.0 L 4247.8 320.0 A 16.0 16.0 0 0 1 4247.8 338.0 L 4122.2 424.0 A 16.0 16.0 0 0 1 4095.8 424.0 L 3970.2 338.0 A 16.0 16.0 0 0 1 3970.2 320.0 Z"/>
-    <text class="t-on" x="4109.0" y="305.0" font-size="16">ยอดเงินในกระ</text>
-    <text class="t-on" x="4109.0" y="329.0" font-size="16">เป๋าพอ</text>
-    <text class="t-on" x="4109.0" y="353.0" font-size="16">ใช่หรือไม่?</text>
-    <rect class="n-rect" x="4761.0" y="2601.0" width="200.0" height="56.0" rx="16"/>
-    <text class="t-on" x="4861.0" y="2629.0" font-size="16">หน้าเติมเงิน</text>
-    <rect class="n-rect" x="5461.0" y="301.0" width="200.0" height="56.0" rx="16"/>
-    <text class="t-on" x="5561.0" y="329.0" font-size="16">หน้าชำระเงิน</text>
-    <rect class="n-oval" x="6217.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
-    <text class="t-on" x="6329.0" y="329.0" font-size="16">ซื้อสำเร็จ</text>
-    <rect class="n-chip" x="2527.0" y="1489.0" width="156.0" height="56.0" rx="8"/>
-    <text class="t-on" x="2605.0" y="1517.0" font-size="16">Flow ยืนยัน OTP</text>
-    <rect class="n-note" x="6161.0" y="3157.0" width="336.0" height="56.0" rx="16"/>
-    <text class="t-note" x="6329.0" y="3185.0" font-size="13">ตัดเงินไม่ผ่าน / สลากถูกคนอื่นซื้อตัด / หมดเวลาจอง</text>
+    <g id="n-s0" class="node">
+      <rect class="n-oval" x="225.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
+      <text class="t-on" x="337.0" y="329.0" font-size="16">กดซื้อ</text>
+    </g>
+    <g id="n-d1" class="node">
+      <path class="n-dia" d="M 1087.8 234.0 A 16.0 16.0 0 0 1 1114.2 234.0 L 1239.8 320.0 A 16.0 16.0 0 0 1 1239.8 338.0 L 1114.2 424.0 A 16.0 16.0 0 0 1 1087.8 424.0 L 962.2 338.0 A 16.0 16.0 0 0 1 962.2 320.0 Z"/>
+      <text class="t-on" x="1101.0" y="317.0" font-size="16">ล็อกอินแล้ว</text>
+      <text class="t-on" x="1101.0" y="341.0" font-size="16">ใช่หรือไม่?</text>
+    </g>
+    <g id="n-p1" class="node">
+      <rect class="n-rect" x="1753.0" y="933.0" width="200.0" height="56.0" rx="16"/>
+      <text class="t-on" x="1853.0" y="961.0" font-size="16">หน้าเข้าสู่ระบบ</text>
+    </g>
+    <g id="n-d2" class="node">
+      <path class="n-dia" d="M 2591.8 234.0 A 16.0 16.0 0 0 1 2618.2 234.0 L 2743.8 320.0 A 16.0 16.0 0 0 1 2743.8 338.0 L 2618.2 424.0 A 16.0 16.0 0 0 1 2591.8 424.0 L 2466.2 338.0 A 16.0 16.0 0 0 1 2466.2 320.0 Z"/>
+      <text class="t-on" x="2605.0" y="317.0" font-size="16">ยืนยันตัวตน (KYC)</text>
+      <text class="t-on" x="2605.0" y="341.0" font-size="16">แล้ว ใช่หรือไม่?</text>
+    </g>
+    <g id="n-p2" class="node">
+      <rect class="n-rect" x="3257.0" y="2045.0" width="200.0" height="56.0" rx="16"/>
+      <text class="t-on" x="3357.0" y="2073.0" font-size="16">หน้ายืนยันตัวตน</text>
+    </g>
+    <g id="n-d3" class="node">
+      <path class="n-dia" d="M 4095.8 234.0 A 16.0 16.0 0 0 1 4122.2 234.0 L 4247.8 320.0 A 16.0 16.0 0 0 1 4247.8 338.0 L 4122.2 424.0 A 16.0 16.0 0 0 1 4095.8 424.0 L 3970.2 338.0 A 16.0 16.0 0 0 1 3970.2 320.0 Z"/>
+      <text class="t-on" x="4109.0" y="305.0" font-size="16">ยอดเงินในกระ</text>
+      <text class="t-on" x="4109.0" y="329.0" font-size="16">เป๋าพอ</text>
+      <text class="t-on" x="4109.0" y="353.0" font-size="16">ใช่หรือไม่?</text>
+    </g>
+    <g id="n-p3" class="node">
+      <rect class="n-rect" x="4761.0" y="2601.0" width="200.0" height="56.0" rx="16"/>
+      <text class="t-on" x="4861.0" y="2629.0" font-size="16">หน้าเติมเงิน</text>
+    </g>
+    <g id="n-p4" class="node">
+      <rect class="n-rect" x="5461.0" y="301.0" width="200.0" height="56.0" rx="16"/>
+      <text class="t-on" x="5561.0" y="329.0" font-size="16">หน้าชำระเงิน</text>
+    </g>
+    <g id="n-e1" class="node">
+      <rect class="n-oval" x="6217.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
+      <text class="t-on" x="6329.0" y="329.0" font-size="16">ซื้อสำเร็จ</text>
+    </g>
+    <g id="n-l1" class="node">
+      <rect class="n-chip" x="2527.0" y="1489.0" width="156.0" height="56.0" rx="8"/>
+      <text class="t-on" x="2605.0" y="1517.0" font-size="16">Flow ยืนยัน OTP</text>
+    </g>
+    <g id="n-p4__perm" class="node">
+      <rect class="n-note" x="6161.0" y="3157.0" width="336.0" height="56.0" rx="16"/>
+      <text class="t-note" x="6329.0" y="3185.0" font-size="13">ตัดเงินไม่ผ่าน / สลากถูกคนอื่นซื้อตัด / หมดเวลาจอง</text>
+    </g>
     <g class="edge-label"><rect x="1332.3" y="314.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="1353.0" y="329.0" font-size="13">Yes</text></g>
     <g class="edge-label"><rect x="1123.7" y="478.0" width="34.6" height="30" rx="8"/><text class="l-no" x="1141.0" y="493.0" font-size="13">No</text></g>
     <g class="edge-label"><rect x="2836.3" y="314.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="2857.0" y="329.0" font-size="13">Yes</text></g>
@@ -175,6 +233,13 @@
     </svg>
     </div>
   </div>
+  
+      <div class="rp">
+        <div class="rp-t">ผลตรวจกฎ</div>
+        <div class="rp-pills"><span class="rp-pill rp-pr0">R0 0</span><span class="rp-pill rp-pr1">R1 0</span><span class="rp-pill rp-pr2">R2 1</span></div>
+        <ul class="rp-list"><li class="rp-item rp-ir2"><div class="rp-head"><span class="rp-sev">R2</span><span class="rp-code">E2</span><span class="rp-sevname">ข้อสังเกต</span></div><div class="rp-msg">หน้าทางพลาด 3 หน้ายังไม่มีเคสพิเศษ — หน้าที่ผู้ใช้ถูกส่งมาเพราะเงื่อนไขไม่ผ่าน มักมีทั้งกรณีทำไม่สำเร็จซ้ำ และกรณีข้อมูลว่าง</div><div class="rp-where"><button class="rp-go" data-go="n-p1" type="button">หน้าเข้าสู่ระบบ</button><button class="rp-go" data-go="n-p2" type="button">หน้ายืนยันตัวตน</button><button class="rp-go" data-go="n-p3" type="button">หน้าเติมเงิน</button></div></li></ul>
+        <p class="rp-foot">รหัสกฎอ้างอิงจาก <code>flow-rules.md</code> — R0 ต้องแก้ก่อนส่ง · R1 ควรแก้ · R2 ดีไซเนอร์ตัดสินใจ</p>
+      </div>
   
       <div class="led">
         <div class="led-t">ที่มาของ flow</div>
@@ -200,6 +265,27 @@
       });
     });
     addEventListener('resize', function () { if (mode === 'fit') apply(); });
+
+    // คลิกชื่อกล่องในผลตรวจ แล้วเลื่อนผังไปหากล่องนั้น + กะพริบให้เห็น
+    document.querySelectorAll('.rp-go').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var g = document.getElementById(b.dataset.go);
+        var box = document.querySelector('.canvas');
+        if (!g || !box) return;
+        var r = g.getBoundingClientRect(), c = box.getBoundingClientRect();
+        box.scrollTo({
+          left: box.scrollLeft + (r.left - c.left) - (c.width - r.width) / 2,
+          top: box.scrollTop + (r.top - c.top) - (c.height - r.height) / 2,
+          behavior: 'smooth'
+        });
+        document.querySelectorAll('.node.hit').forEach(function (o) {
+          o.classList.remove('hit');
+        });
+        void g.getBoundingClientRect();
+        g.classList.add('hit');
+        setTimeout(function () { g.classList.remove('hit'); }, 1200);
+      });
+    });
     apply();
   })();
 </script>

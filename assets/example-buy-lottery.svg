@@ -52,32 +52,54 @@
 <path class="e-solid" marker-end="url(#arw)" d="M 1953.0 961.0 L 2262.0 961.0 A 16.0 16.0 0 0 1 2278.0 977.0 L 2278.0 1501.0 A 16.0 16.0 0 0 0 2294.0 1517.0 L 2527.0 1517.0"/>
 <circle class="e-dot" cx="1953.0" cy="961.0" r="6"/>
 <path class="e-perm" marker-end="url(#arw-perm)" d="M 5561.0 357.0 L 5561.0 401.0 A 16.0 16.0 0 0 0 5577.0 417.0 L 5970.0 417.0 A 16.0 16.0 0 0 1 5986.0 433.0 L 5986.0 3169.0 A 16.0 16.0 0 0 0 6002.0 3185.0 L 6161.0 3185.0"/>
-<rect class="n-oval" x="225.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
-    <text class="t-on" x="337.0" y="329.0" font-size="16">กดซื้อ</text>
-    <path class="n-dia" d="M 1087.8 234.0 A 16.0 16.0 0 0 1 1114.2 234.0 L 1239.8 320.0 A 16.0 16.0 0 0 1 1239.8 338.0 L 1114.2 424.0 A 16.0 16.0 0 0 1 1087.8 424.0 L 962.2 338.0 A 16.0 16.0 0 0 1 962.2 320.0 Z"/>
-    <text class="t-on" x="1101.0" y="317.0" font-size="16">ล็อกอินแล้ว</text>
-    <text class="t-on" x="1101.0" y="341.0" font-size="16">ใช่หรือไม่?</text>
-    <rect class="n-rect" x="1753.0" y="933.0" width="200.0" height="56.0" rx="16"/>
-    <text class="t-on" x="1853.0" y="961.0" font-size="16">หน้าเข้าสู่ระบบ</text>
-    <path class="n-dia" d="M 2591.8 234.0 A 16.0 16.0 0 0 1 2618.2 234.0 L 2743.8 320.0 A 16.0 16.0 0 0 1 2743.8 338.0 L 2618.2 424.0 A 16.0 16.0 0 0 1 2591.8 424.0 L 2466.2 338.0 A 16.0 16.0 0 0 1 2466.2 320.0 Z"/>
-    <text class="t-on" x="2605.0" y="317.0" font-size="16">ยืนยันตัวตน (KYC)</text>
-    <text class="t-on" x="2605.0" y="341.0" font-size="16">แล้ว ใช่หรือไม่?</text>
-    <rect class="n-rect" x="3257.0" y="2045.0" width="200.0" height="56.0" rx="16"/>
-    <text class="t-on" x="3357.0" y="2073.0" font-size="16">หน้ายืนยันตัวตน</text>
-    <path class="n-dia" d="M 4095.8 234.0 A 16.0 16.0 0 0 1 4122.2 234.0 L 4247.8 320.0 A 16.0 16.0 0 0 1 4247.8 338.0 L 4122.2 424.0 A 16.0 16.0 0 0 1 4095.8 424.0 L 3970.2 338.0 A 16.0 16.0 0 0 1 3970.2 320.0 Z"/>
-    <text class="t-on" x="4109.0" y="305.0" font-size="16">ยอดเงินในกระ</text>
-    <text class="t-on" x="4109.0" y="329.0" font-size="16">เป๋าพอ</text>
-    <text class="t-on" x="4109.0" y="353.0" font-size="16">ใช่หรือไม่?</text>
-    <rect class="n-rect" x="4761.0" y="2601.0" width="200.0" height="56.0" rx="16"/>
-    <text class="t-on" x="4861.0" y="2629.0" font-size="16">หน้าเติมเงิน</text>
-    <rect class="n-rect" x="5461.0" y="301.0" width="200.0" height="56.0" rx="16"/>
-    <text class="t-on" x="5561.0" y="329.0" font-size="16">หน้าชำระเงิน</text>
-    <rect class="n-oval" x="6217.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
-    <text class="t-on" x="6329.0" y="329.0" font-size="16">ซื้อสำเร็จ</text>
-    <rect class="n-chip" x="2527.0" y="1489.0" width="156.0" height="56.0" rx="8"/>
-    <text class="t-on" x="2605.0" y="1517.0" font-size="16">Flow ยืนยัน OTP</text>
-    <rect class="n-note" x="6161.0" y="3157.0" width="336.0" height="56.0" rx="16"/>
-    <text class="t-note" x="6329.0" y="3185.0" font-size="13">ตัดเงินไม่ผ่าน / สลากถูกคนอื่นซื้อตัด / หมดเวลาจอง</text>
+<g id="n-s0" class="node">
+      <rect class="n-oval" x="225.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
+      <text class="t-on" x="337.0" y="329.0" font-size="16">กดซื้อ</text>
+    </g>
+    <g id="n-d1" class="node">
+      <path class="n-dia" d="M 1087.8 234.0 A 16.0 16.0 0 0 1 1114.2 234.0 L 1239.8 320.0 A 16.0 16.0 0 0 1 1239.8 338.0 L 1114.2 424.0 A 16.0 16.0 0 0 1 1087.8 424.0 L 962.2 338.0 A 16.0 16.0 0 0 1 962.2 320.0 Z"/>
+      <text class="t-on" x="1101.0" y="317.0" font-size="16">ล็อกอินแล้ว</text>
+      <text class="t-on" x="1101.0" y="341.0" font-size="16">ใช่หรือไม่?</text>
+    </g>
+    <g id="n-p1" class="node">
+      <rect class="n-rect" x="1753.0" y="933.0" width="200.0" height="56.0" rx="16"/>
+      <text class="t-on" x="1853.0" y="961.0" font-size="16">หน้าเข้าสู่ระบบ</text>
+    </g>
+    <g id="n-d2" class="node">
+      <path class="n-dia" d="M 2591.8 234.0 A 16.0 16.0 0 0 1 2618.2 234.0 L 2743.8 320.0 A 16.0 16.0 0 0 1 2743.8 338.0 L 2618.2 424.0 A 16.0 16.0 0 0 1 2591.8 424.0 L 2466.2 338.0 A 16.0 16.0 0 0 1 2466.2 320.0 Z"/>
+      <text class="t-on" x="2605.0" y="317.0" font-size="16">ยืนยันตัวตน (KYC)</text>
+      <text class="t-on" x="2605.0" y="341.0" font-size="16">แล้ว ใช่หรือไม่?</text>
+    </g>
+    <g id="n-p2" class="node">
+      <rect class="n-rect" x="3257.0" y="2045.0" width="200.0" height="56.0" rx="16"/>
+      <text class="t-on" x="3357.0" y="2073.0" font-size="16">หน้ายืนยันตัวตน</text>
+    </g>
+    <g id="n-d3" class="node">
+      <path class="n-dia" d="M 4095.8 234.0 A 16.0 16.0 0 0 1 4122.2 234.0 L 4247.8 320.0 A 16.0 16.0 0 0 1 4247.8 338.0 L 4122.2 424.0 A 16.0 16.0 0 0 1 4095.8 424.0 L 3970.2 338.0 A 16.0 16.0 0 0 1 3970.2 320.0 Z"/>
+      <text class="t-on" x="4109.0" y="305.0" font-size="16">ยอดเงินในกระ</text>
+      <text class="t-on" x="4109.0" y="329.0" font-size="16">เป๋าพอ</text>
+      <text class="t-on" x="4109.0" y="353.0" font-size="16">ใช่หรือไม่?</text>
+    </g>
+    <g id="n-p3" class="node">
+      <rect class="n-rect" x="4761.0" y="2601.0" width="200.0" height="56.0" rx="16"/>
+      <text class="t-on" x="4861.0" y="2629.0" font-size="16">หน้าเติมเงิน</text>
+    </g>
+    <g id="n-p4" class="node">
+      <rect class="n-rect" x="5461.0" y="301.0" width="200.0" height="56.0" rx="16"/>
+      <text class="t-on" x="5561.0" y="329.0" font-size="16">หน้าชำระเงิน</text>
+    </g>
+    <g id="n-e1" class="node">
+      <rect class="n-oval" x="6217.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
+      <text class="t-on" x="6329.0" y="329.0" font-size="16">ซื้อสำเร็จ</text>
+    </g>
+    <g id="n-l1" class="node">
+      <rect class="n-chip" x="2527.0" y="1489.0" width="156.0" height="56.0" rx="8"/>
+      <text class="t-on" x="2605.0" y="1517.0" font-size="16">Flow ยืนยัน OTP</text>
+    </g>
+    <g id="n-p4__perm" class="node">
+      <rect class="n-note" x="6161.0" y="3157.0" width="336.0" height="56.0" rx="16"/>
+      <text class="t-note" x="6329.0" y="3185.0" font-size="13">ตัดเงินไม่ผ่าน / สลากถูกคนอื่นซื้อตัด / หมดเวลาจอง</text>
+    </g>
 <g class="edge-label"><rect x="1332.3" y="314.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="1353.0" y="329.0" font-size="13">Yes</text></g>
 <g class="edge-label"><rect x="1123.7" y="478.0" width="34.6" height="30" rx="8"/><text class="l-no" x="1141.0" y="493.0" font-size="13">No</text></g>
 <g class="edge-label"><rect x="2836.3" y="314.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="2857.0" y="329.0" font-size="13">Yes</text></g>
