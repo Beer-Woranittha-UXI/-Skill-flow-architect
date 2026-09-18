@@ -26,8 +26,13 @@
     padding:24px 28px 80px; }
   .lg { position:sticky; top:104px; flex:0 0 300px; background:var(--paper);
     border:1px solid var(--hairline); border-radius:16px; padding:20px 24px; }
-  .lg-t { font-weight:700; font-size:15px; margin-bottom:14px;
-    border-bottom:2px solid var(--ink); display:inline-block; padding-bottom:2px; }
+  .lg-t { font-family:inherit; font-weight:700; font-size:15px; color:var(--ink);
+    background:none; border:0; border-bottom:2px solid var(--ink); padding:0 0 2px;
+    display:flex; gap:10px; align-items:center; cursor:pointer; }
+  .lg-caret { font-size:11px; transition:transform .15s ease; }
+  .lg-t[aria-expanded="false"] .lg-caret { transform:rotate(-90deg); }
+  .lg-b { margin-top:14px; }
+  .lg-t[aria-expanded="false"] + .lg-b { display:none; }
   .lg-i { display:flex; gap:12px; align-items:center; margin:12px 0; font-size:12px;
     color:var(--muted); line-height:1.4; }
   .lg-i svg { flex:0 0 54px; }
@@ -112,6 +117,19 @@
     color:var(--primary); background:var(--paper); border:1px solid var(--primary);
     border-radius:8px; padding:6px 12px; cursor:pointer; }
   .zoom button[aria-pressed="true"] { background:var(--primary); color:#fff; }
+  .zoom button[disabled] { opacity:.35; cursor:default; }
+  .zoom .sep { width:1px; height:22px; background:var(--hairline); }
+  .zoom kbd { font-family:ui-monospace,Menlo,monospace; font-size:11px;
+    border:1px solid var(--hairline); border-radius:5px; padding:1px 5px;
+    color:var(--muted); background:var(--paper); }
+  .zoom .hint { font-size:12px; color:var(--muted); }
+  /* ── ตัวแก้ผังในหน้า — เลื่อนเพื่อจัดสายตา ไม่ใช่การแก้ .flow ── */
+  .node { cursor:grab; }
+  .node.dragging { cursor:grabbing; }
+  .node * { pointer-events:none; }
+  .e-hit { fill:none; stroke:transparent; stroke-width:28;
+    pointer-events:stroke; cursor:move; }
+  .dirty-note { font-size:12px; color:var(--perm-ink,#8a6100); }
   .n-rect, .n-oval, .n-chip, .n-dia { fill:var(--primary); stroke:none; }
   .n-note { fill:#FFFBEC; stroke:var(--perm); stroke-width:2; stroke-dasharray:8 6; }
   text { text-anchor:middle; dominant-baseline:central; font-weight:600;
@@ -143,8 +161,10 @@
 </header>
 <main>
   
-      <div class="lg">
-        <div class="lg-t">Tools in Flow</div>
+      <div class="lg" id="lg">
+        <button type="button" class="lg-t" id="lg-toggle" aria-expanded="true"
+          aria-controls="lg-body"><span>Tools in Flow</span><span class="lg-caret" aria-hidden="true">▾</span></button>
+        <div class="lg-b" id="lg-body">
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><path d="M27 2 L52 13 L27 24 L2 13 Z" fill="var(--primary)"/></svg><span>Diamond Condition — จบประโยคด้วย “ใช่หรือไม่?”</span></div>
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><rect x="2" y="5" width="50" height="16" rx="8" fill="var(--primary)"/></svg><span>Link To Flow</span></div>
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><circle cx="6" cy="13" r="4" fill="var(--primary)"/><path d="M10 13 H44" stroke="var(--primary)" stroke-width="3"/><path d="M42 7 l8 6 -8 6" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>เส้นปกติ — กดแล้วไปหน้าบันทึก และไปต่อ</span></div>
@@ -152,13 +172,24 @@
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><path d="M2 13 H10" stroke="var(--primary)" stroke-width="3"/><text x="14" y="17" font-size="10" fill="var(--yes)" font-weight="700">Yes</text><path d="M34 13 H44" stroke="var(--primary)" stroke-width="3"/><path d="M42 7 l8 6 -8 6" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>ทางออก Diamond: Yes</span></div>
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><path d="M2 13 H10" stroke="var(--primary)" stroke-width="3"/><text x="15" y="17" font-size="10" fill="var(--no)" font-weight="700">No</text><path d="M34 13 H44" stroke="var(--primary)" stroke-width="3"/><path d="M42 7 l8 6 -8 6" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>ทางออก Diamond: No</span></div>
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><path d="M2 13 H50" stroke="var(--perm)" stroke-width="4" stroke-dasharray="9 7" stroke-linecap="round"/></svg><span>หน้านั้น ๆ มี Permutation (Edge Case)</span></div>
+        </div>
       </div>
   <div class="canvas">
-    <div class="zoom" role="group" aria-label="ย่อ/ขยาย">
+    <div class="zoom" role="group" aria-label="เครื่องมือผัง">
+      <button id="z-out" title="ย่อ (Ctrl/⌘ -)" aria-label="ย่อ">−</button>
+      <span class="hint" id="z-now">100%</span>
+      <button id="z-in" title="ขยาย (Ctrl/⌘ +)" aria-label="ขยาย">+</button>
       <button data-z="fit" aria-pressed="true">พอดีจอ</button>
-      <button data-z="0.5">50%</button>
-      <button data-z="1">100% (ขนาดจริง)</button>
-      <span style="font-size:12px;color:var(--muted)">canvas 6650×3510px</span>
+      <button data-z="1" title="ขนาดจริง (Ctrl/⌘ 0)">100%</button>
+      <span class="sep"></span>
+      <button id="ed-undo" disabled title="ย้อน (Ctrl/⌘ Z)">↶ ย้อน</button>
+      <button id="ed-redo" disabled title="ทำซ้ำ (Ctrl/⌘ ⇧ Z)">↷ ทำซ้ำ</button>
+      <button id="ed-reset" disabled title="คืนตำแหน่งที่สคริปต์คำนวณไว้">คืนตำแหน่งเดิม</button>
+      <span class="sep"></span>
+      <span class="hint">canvas 6650×3510px · ลากกล่องหรือลากเส้นเพื่อจัดสายตา
+        <kbd>Ctrl/⌘ Z</kbd> <kbd>Ctrl/⌘ +</kbd> <kbd>Ctrl/⌘ -</kbd> <kbd>Ctrl/⌘ 0</kbd></span>
+      <span class="hint dirty-note" id="ed-dirty" hidden>ตำแหน่งถูกเลื่อนด้วยมือแล้ว —
+        อยู่แค่ในหน้านี้ ไม่ได้แก้ .flow และไม่เปลี่ยนผลตรวจ G1–G9</span>
     </div>
     <div class="zoomwrap" id="zw">
     <svg class="flow" viewBox="0 0 6650 3510" role="img" aria-labelledby="ttl dsc">
@@ -176,82 +207,82 @@
             stroke-linecap="round" stroke-linejoin="round"/>
         </marker>
       </defs>
-    <path class="e-solid" marker-end="url(#arw)" d="M 449.0 365.0 L 949.0 365.0"/>
-    <circle class="e-dot" cx="449.0" cy="365.0" r="6"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 1229.0 365.0 L 2429.0 365.0"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 1089.0 505.0 L 1089.0 549.0 A 16.0 16.0 0 0 0 1105.0 565.0 L 1538.0 565.0 A 16.0 16.0 0 0 1 1554.0 581.0 L 1554.0 1017.0 A 16.0 16.0 0 0 0 1570.0 1033.0 L 1729.0 1033.0"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 1929.0 1033.0 L 2238.0 1033.0 A 16.0 16.0 0 0 0 2254.0 1017.0 L 2254.0 381.0 A 16.0 16.0 0 0 1 2270.0 365.0 L 2429.0 365.0"/>
-    <circle class="e-dot" cx="1929.0" cy="1033.0" r="6"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 2709.0 365.0 L 3909.0 365.0"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 2569.0 505.0 L 2569.0 549.0 A 16.0 16.0 0 0 0 2585.0 565.0 L 3018.0 565.0 A 16.0 16.0 0 0 1 3034.0 581.0 L 3034.0 2129.0 A 16.0 16.0 0 0 0 3050.0 2145.0 L 3209.0 2145.0"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 3409.0 2145.0 L 3718.0 2145.0 A 16.0 16.0 0 0 0 3734.0 2129.0 L 3734.0 381.0 A 16.0 16.0 0 0 1 3750.0 365.0 L 3909.0 365.0"/>
-    <circle class="e-dot" cx="3409.0" cy="2145.0" r="6"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 4189.0 365.0 L 5389.0 365.0"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 4049.0 505.0 L 4049.0 549.0 A 16.0 16.0 0 0 0 4065.0 565.0 L 4498.0 565.0 A 16.0 16.0 0 0 1 4514.0 581.0 L 4514.0 2685.0 A 16.0 16.0 0 0 0 4530.0 2701.0 L 4689.0 2701.0"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 4889.0 2701.0 L 5198.0 2701.0 A 16.0 16.0 0 0 0 5214.0 2685.0 L 5214.0 381.0 A 16.0 16.0 0 0 1 5230.0 365.0 L 5389.0 365.0"/>
-    <circle class="e-dot" cx="4889.0" cy="2701.0" r="6"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 5589.0 365.0 L 6145.0 365.0"/>
-    <circle class="e-dot" cx="5589.0" cy="365.0" r="6"/>
-    <path class="e-back" marker-end="url(#arw)" d="M 3309.0 2117.0 L 3309.0 1252.0 A 16.0 16.0 0 0 0 3293.0 1236.0 L 1845.0 1236.0 A 16.0 16.0 0 0 1 1829.0 1220.0 L 1829.0 1061.0"/>
-    <circle class="e-dot" cx="3309.0" cy="2117.0" r="6"/>
-    <path class="e-solid" marker-end="url(#arw)" d="M 1929.0 1033.0 L 2238.0 1033.0 A 16.0 16.0 0 0 1 2254.0 1049.0 L 2254.0 1573.0 A 16.0 16.0 0 0 0 2270.0 1589.0 L 2491.0 1589.0"/>
-    <circle class="e-dot" cx="1929.0" cy="1033.0" r="6"/>
-    <path class="e-perm" marker-end="url(#arw-perm)" d="M 5489.0 393.0 L 5489.0 437.0 A 16.0 16.0 0 0 0 5505.0 453.0 L 5898.0 453.0 A 16.0 16.0 0 0 1 5914.0 469.0 L 5914.0 3241.0 A 16.0 16.0 0 0 0 5930.0 3257.0 L 6089.0 3257.0"/>
-    <g id="n-s0" class="node">
+    <path class="e-solid" marker-end="url(#arw)" data-e="0" data-from="s0" data-to="d1" data-pts="449.0,365.0 949.0,365.0" d="M 449.0 365.0 L 949.0 365.0"/>
+    <circle class="e-dot" data-e="0" cx="449.0" cy="365.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" data-e="1" data-from="d1" data-to="d2" data-pts="1229.0,365.0 2429.0,365.0" d="M 1229.0 365.0 L 2429.0 365.0"/>
+    <path class="e-solid" marker-end="url(#arw)" data-e="2" data-from="d1" data-to="p1" data-pts="1089.0,505.0 1089.0,565.0 1554.0,565.0 1554.0,1033.0 1729.0,1033.0" d="M 1089.0 505.0 L 1089.0 549.0 A 16.0 16.0 0 0 0 1105.0 565.0 L 1538.0 565.0 A 16.0 16.0 0 0 1 1554.0 581.0 L 1554.0 1017.0 A 16.0 16.0 0 0 0 1570.0 1033.0 L 1729.0 1033.0"/>
+    <path class="e-solid" marker-end="url(#arw)" data-e="3" data-from="p1" data-to="d2" data-pts="1929.0,1033.0 2254.0,1033.0 2254.0,365.0 2429.0,365.0" d="M 1929.0 1033.0 L 2238.0 1033.0 A 16.0 16.0 0 0 0 2254.0 1017.0 L 2254.0 381.0 A 16.0 16.0 0 0 1 2270.0 365.0 L 2429.0 365.0"/>
+    <circle class="e-dot" data-e="3" cx="1929.0" cy="1033.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" data-e="4" data-from="d2" data-to="d3" data-pts="2709.0,365.0 3909.0,365.0" d="M 2709.0 365.0 L 3909.0 365.0"/>
+    <path class="e-solid" marker-end="url(#arw)" data-e="5" data-from="d2" data-to="p2" data-pts="2569.0,505.0 2569.0,565.0 3034.0,565.0 3034.0,2145.0 3209.0,2145.0" d="M 2569.0 505.0 L 2569.0 549.0 A 16.0 16.0 0 0 0 2585.0 565.0 L 3018.0 565.0 A 16.0 16.0 0 0 1 3034.0 581.0 L 3034.0 2129.0 A 16.0 16.0 0 0 0 3050.0 2145.0 L 3209.0 2145.0"/>
+    <path class="e-solid" marker-end="url(#arw)" data-e="6" data-from="p2" data-to="d3" data-pts="3409.0,2145.0 3734.0,2145.0 3734.0,365.0 3909.0,365.0" d="M 3409.0 2145.0 L 3718.0 2145.0 A 16.0 16.0 0 0 0 3734.0 2129.0 L 3734.0 381.0 A 16.0 16.0 0 0 1 3750.0 365.0 L 3909.0 365.0"/>
+    <circle class="e-dot" data-e="6" cx="3409.0" cy="2145.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" data-e="7" data-from="d3" data-to="p4" data-pts="4189.0,365.0 5389.0,365.0" d="M 4189.0 365.0 L 5389.0 365.0"/>
+    <path class="e-solid" marker-end="url(#arw)" data-e="8" data-from="d3" data-to="p3" data-pts="4049.0,505.0 4049.0,565.0 4514.0,565.0 4514.0,2701.0 4689.0,2701.0" d="M 4049.0 505.0 L 4049.0 549.0 A 16.0 16.0 0 0 0 4065.0 565.0 L 4498.0 565.0 A 16.0 16.0 0 0 1 4514.0 581.0 L 4514.0 2685.0 A 16.0 16.0 0 0 0 4530.0 2701.0 L 4689.0 2701.0"/>
+    <path class="e-solid" marker-end="url(#arw)" data-e="9" data-from="p3" data-to="p4" data-pts="4889.0,2701.0 5214.0,2701.0 5214.0,365.0 5389.0,365.0" d="M 4889.0 2701.0 L 5198.0 2701.0 A 16.0 16.0 0 0 0 5214.0 2685.0 L 5214.0 381.0 A 16.0 16.0 0 0 1 5230.0 365.0 L 5389.0 365.0"/>
+    <circle class="e-dot" data-e="9" cx="4889.0" cy="2701.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" data-e="10" data-from="p4" data-to="e1" data-pts="5589.0,365.0 6145.0,365.0" d="M 5589.0 365.0 L 6145.0 365.0"/>
+    <circle class="e-dot" data-e="10" cx="5589.0" cy="365.0" r="6"/>
+    <path class="e-back" marker-end="url(#arw)" data-e="11" data-from="p2" data-to="p1" data-pts="3309.0,2117.0 3309.0,1236.0 1829.0,1236.0 1829.0,1061.0" d="M 3309.0 2117.0 L 3309.0 1252.0 A 16.0 16.0 0 0 0 3293.0 1236.0 L 1845.0 1236.0 A 16.0 16.0 0 0 1 1829.0 1220.0 L 1829.0 1061.0"/>
+    <circle class="e-dot" data-e="11" cx="3309.0" cy="2117.0" r="6"/>
+    <path class="e-solid" marker-end="url(#arw)" data-e="12" data-from="p1" data-to="l1" data-pts="1929.0,1033.0 2254.0,1033.0 2254.0,1589.0 2491.0,1589.0" d="M 1929.0 1033.0 L 2238.0 1033.0 A 16.0 16.0 0 0 1 2254.0 1049.0 L 2254.0 1573.0 A 16.0 16.0 0 0 0 2270.0 1589.0 L 2491.0 1589.0"/>
+    <circle class="e-dot" data-e="12" cx="1929.0" cy="1033.0" r="6"/>
+    <path class="e-perm" marker-end="url(#arw-perm)" data-e="13" data-from="p4" data-to="p4__perm" data-pts="5489.0,393.0 5489.0,453.0 5914.0,453.0 5914.0,3257.0 6089.0,3257.0" d="M 5489.0 393.0 L 5489.0 437.0 A 16.0 16.0 0 0 0 5505.0 453.0 L 5898.0 453.0 A 16.0 16.0 0 0 1 5914.0 469.0 L 5914.0 3241.0 A 16.0 16.0 0 0 0 5930.0 3257.0 L 6089.0 3257.0"/>
+    <g id="n-s0" class="node" data-id="s0" data-x="225.0" data-y="337.0" data-w="224.0" data-h="56.0">
       <rect class="n-oval" x="225.0" y="337.0" width="224.0" height="56.0" rx="28.0"/>
       <text class="t-on" x="337.0" y="365.0" font-size="16">กดซื้อ</text>
     </g>
-    <g id="n-d1" class="node">
+    <g id="n-d1" class="node" data-id="d1" data-x="949.0" data-y="225.0" data-w="280.0" data-h="280.0">
       <path class="n-dia" d="M 1077.7 236.3 A 16.0 16.0 0 0 1 1100.3 236.3 L 1217.7 353.7 A 16.0 16.0 0 0 1 1217.7 376.3 L 1100.3 493.7 A 16.0 16.0 0 0 1 1077.7 493.7 L 960.3 376.3 A 16.0 16.0 0 0 1 960.3 353.7 Z"/>
       <text class="t-on" x="1089.0" y="353.0" font-size="16">ล็อกอินแล้ว</text>
       <text class="t-on" x="1089.0" y="377.0" font-size="16">ใช่หรือไม่?</text>
     </g>
-    <g id="n-p1" class="node">
+    <g id="n-p1" class="node" data-id="p1" data-x="1729.0" data-y="1005.0" data-w="200.0" data-h="56.0">
       <rect class="n-rect" x="1729.0" y="1005.0" width="200.0" height="56.0" rx="16"/>
       <text class="t-on" x="1829.0" y="1033.0" font-size="16">หน้าเข้าสู่ระบบ</text>
     </g>
-    <g id="n-d2" class="node">
+    <g id="n-d2" class="node" data-id="d2" data-x="2429.0" data-y="225.0" data-w="280.0" data-h="280.0">
       <path class="n-dia" d="M 2557.7 236.3 A 16.0 16.0 0 0 1 2580.3 236.3 L 2697.7 353.7 A 16.0 16.0 0 0 1 2697.7 376.3 L 2580.3 493.7 A 16.0 16.0 0 0 1 2557.7 493.7 L 2440.3 376.3 A 16.0 16.0 0 0 1 2440.3 353.7 Z"/>
       <text class="t-on" x="2569.0" y="341.0" font-size="16">ยืนยันตัวตน</text>
       <text class="t-on" x="2569.0" y="365.0" font-size="16">(KYC) แล้ว</text>
       <text class="t-on" x="2569.0" y="389.0" font-size="16">ใช่หรือไม่?</text>
     </g>
-    <g id="n-p2" class="node">
+    <g id="n-p2" class="node" data-id="p2" data-x="3209.0" data-y="2117.0" data-w="200.0" data-h="56.0">
       <rect class="n-rect" x="3209.0" y="2117.0" width="200.0" height="56.0" rx="16"/>
       <text class="t-on" x="3309.0" y="2145.0" font-size="16">หน้ายืนยันตัวตน</text>
     </g>
-    <g id="n-d3" class="node">
+    <g id="n-d3" class="node" data-id="d3" data-x="3909.0" data-y="225.0" data-w="280.0" data-h="280.0">
       <path class="n-dia" d="M 4037.7 236.3 A 16.0 16.0 0 0 1 4060.3 236.3 L 4177.7 353.7 A 16.0 16.0 0 0 1 4177.7 376.3 L 4060.3 493.7 A 16.0 16.0 0 0 1 4037.7 493.7 L 3920.3 376.3 A 16.0 16.0 0 0 1 3920.3 353.7 Z"/>
       <text class="t-on" x="4049.0" y="341.0" font-size="16">ยอดเงินในกระ</text>
       <text class="t-on" x="4049.0" y="365.0" font-size="16">เป๋าพอ</text>
       <text class="t-on" x="4049.0" y="389.0" font-size="16">ใช่หรือไม่?</text>
     </g>
-    <g id="n-p3" class="node">
+    <g id="n-p3" class="node" data-id="p3" data-x="4689.0" data-y="2673.0" data-w="200.0" data-h="56.0">
       <rect class="n-rect" x="4689.0" y="2673.0" width="200.0" height="56.0" rx="16"/>
       <text class="t-on" x="4789.0" y="2701.0" font-size="16">หน้าเติมเงิน</text>
     </g>
-    <g id="n-p4" class="node">
+    <g id="n-p4" class="node" data-id="p4" data-x="5389.0" data-y="337.0" data-w="200.0" data-h="56.0">
       <rect class="n-rect" x="5389.0" y="337.0" width="200.0" height="56.0" rx="16"/>
       <text class="t-on" x="5489.0" y="365.0" font-size="16">หน้าชำระเงิน</text>
     </g>
-    <g id="n-e1" class="node">
+    <g id="n-e1" class="node" data-id="e1" data-x="6145.0" data-y="337.0" data-w="224.0" data-h="56.0">
       <rect class="n-oval" x="6145.0" y="337.0" width="224.0" height="56.0" rx="28.0"/>
       <text class="t-on" x="6257.0" y="365.0" font-size="16">ซื้อสำเร็จ</text>
     </g>
-    <g id="n-l1" class="node">
+    <g id="n-l1" class="node" data-id="l1" data-x="2491.0" data-y="1561.0" data-w="156.0" data-h="56.0">
       <rect class="n-chip" x="2491.0" y="1561.0" width="156.0" height="56.0" rx="8"/>
       <text class="t-on" x="2569.0" y="1589.0" font-size="16">Flow ยืนยัน OTP</text>
     </g>
-    <g id="n-p4__perm" class="node">
+    <g id="n-p4__perm" class="node" data-id="p4__perm" data-x="6089.0" data-y="3229.0" data-w="336.0" data-h="56.0">
       <rect class="n-note" x="6089.0" y="3229.0" width="336.0" height="56.0" rx="16"/>
       <text class="t-note" x="6257.0" y="3257.0" font-size="13">ตัดเงินไม่ผ่าน / สลากถูกคนอื่นซื้อตัด / หมดเวลาจอง</text>
     </g>
-    <g class="edge-label"><rect x="1308.3" y="350.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="1329.0" y="365.0" font-size="13">Yes</text></g>
-    <g class="edge-label"><rect x="1111.7" y="550.0" width="34.6" height="30" rx="8"/><text class="l-no" x="1129.0" y="565.0" font-size="13">No</text></g>
-    <g class="edge-label"><rect x="2788.3" y="350.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="2809.0" y="365.0" font-size="13">Yes</text></g>
-    <g class="edge-label"><rect x="2591.7" y="550.0" width="34.6" height="30" rx="8"/><text class="l-no" x="2609.0" y="565.0" font-size="13">No</text></g>
-    <g class="edge-label"><rect x="4268.3" y="350.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="4289.0" y="365.0" font-size="13">Yes</text></g>
-    <g class="edge-label"><rect x="4071.7" y="550.0" width="34.6" height="30" rx="8"/><text class="l-no" x="4089.0" y="565.0" font-size="13">No</text></g>
+    <g class="edge-label" data-e="1" data-dist="100.0" data-lw="41.3"><rect x="1308.3" y="350.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="1329.0" y="365.0" font-size="13">Yes</text></g>
+    <g class="edge-label" data-e="2" data-dist="100.0" data-lw="34.6"><rect x="1111.7" y="550.0" width="34.6" height="30" rx="8"/><text class="l-no" x="1129.0" y="565.0" font-size="13">No</text></g>
+    <g class="edge-label" data-e="4" data-dist="100.0" data-lw="41.3"><rect x="2788.3" y="350.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="2809.0" y="365.0" font-size="13">Yes</text></g>
+    <g class="edge-label" data-e="5" data-dist="100.0" data-lw="34.6"><rect x="2591.7" y="550.0" width="34.6" height="30" rx="8"/><text class="l-no" x="2609.0" y="565.0" font-size="13">No</text></g>
+    <g class="edge-label" data-e="7" data-dist="100.0" data-lw="41.3"><rect x="4268.3" y="350.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="4289.0" y="365.0" font-size="13">Yes</text></g>
+    <g class="edge-label" data-e="8" data-dist="100.0" data-lw="34.6"><rect x="4071.7" y="550.0" width="34.6" height="30" rx="8"/><text class="l-no" x="4089.0" y="565.0" font-size="13">No</text></g>
     </svg>
     </div>
   </div>
@@ -270,24 +301,6 @@
 </main>
 <script>
   (function () {
-    var zw = document.getElementById('zw'), W = 6650, H = 3510;
-    var wrap = zw.parentElement, mode = 'fit';
-    function apply() {
-      var k = mode === 'fit' ? Math.min(1, (wrap.clientWidth - 24) / W) : parseFloat(mode);
-      zw.style.transform = 'scale(' + k + ')';
-      zw.style.height = (H * k) + 'px';
-    }
-    document.querySelectorAll('.zoom button').forEach(function (b) {
-      b.addEventListener('click', function () {
-        mode = b.dataset.z;
-        document.querySelectorAll('.zoom button').forEach(function (o) {
-          o.setAttribute('aria-pressed', String(o === b));
-        });
-        apply();
-      });
-    });
-    addEventListener('resize', function () { if (mode === 'fit') apply(); });
-
     // รับ/ไม่รับรายข้อ — จำไว้ในเครื่องผู้ใช้ แล้วคัดลอกกลับไปวางในแชทได้
     (function () {
       var items = [].slice.call(document.querySelectorAll('.rp-item'));
@@ -329,8 +342,7 @@
             (v === 'yes' ? 'รับ' : v === 'no' ? 'ไม่รับ' : 'ยังไม่ตัดสิน') +
             ' — ' + li.dataset.msg);
         });
-        var t = out.join('
-');
+        var t = out.join('\n');   // ต้อง escape — HTML_TMPL ไม่ใช่ raw string
         document.getElementById('rp-out').value = t;
         if (navigator.clipboard) navigator.clipboard.writeText(t);
       });
@@ -364,8 +376,348 @@
         setTimeout(function () { g.classList.remove('hit'); }, 1200);
       });
     });
-    apply();
   })();
+</script>
+<script>
+
+(function () {
+  var svg = document.querySelector('svg.flow');
+  var zw = document.getElementById('zw');
+  if (!svg || !zw) return;
+  var wrap = zw.parentElement;
+  var vb = (svg.getAttribute('viewBox') || '0 0 1000 1000').trim().split(/\s+/).map(Number);
+  var W = vb[2], H = vb[3];
+  var ELBOW = 16, MINK = 0.05, MAXK = 4;
+
+  // ── ย่อ/ขยาย ────────────────────────────────────────────────────────
+  var scale = null;                       // null = พอดีจอ
+  function fitK() { return Math.min(1, (wrap.clientWidth - 24) / W); }
+  function k() { return scale === null ? fitK() : scale; }
+  function paintZoom() {
+    var v = k();
+    zw.style.transform = 'scale(' + v + ')';
+    zw.style.height = (H * v) + 'px';
+    var now = document.getElementById('z-now');
+    if (now) now.textContent = Math.round(v * 100) + '%';
+    document.querySelectorAll('.zoom button[data-z]').forEach(function (b) {
+      var on = b.dataset.z === 'fit' ? scale === null : parseFloat(b.dataset.z) === scale;
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+  function setScale(v) { scale = Math.max(MINK, Math.min(MAXK, v)); paintZoom(); }
+  function step(f) { setScale(k() * f); }
+  document.querySelectorAll('.zoom button[data-z]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      scale = b.dataset.z === 'fit' ? null : parseFloat(b.dataset.z);
+      paintZoom();
+    });
+  });
+  var zi = document.getElementById('z-in'), zo = document.getElementById('z-out');
+  if (zi) zi.addEventListener('click', function () { step(1.25); });
+  if (zo) zo.addEventListener('click', function () { step(0.8); });
+  addEventListener('resize', function () { if (scale === null) paintZoom(); });
+
+  // ── Tools in Flow ปิด/เปิดได้ จำไว้ในเครื่อง ─────────────────────────
+  var lgBtn = document.getElementById('lg-toggle');
+  if (lgBtn) {
+    var LKEY = 'flowlegend';
+    try {
+      if (localStorage.getItem(LKEY) === 'closed') lgBtn.setAttribute('aria-expanded', 'false');
+    } catch (e) {}
+    lgBtn.addEventListener('click', function () {
+      var open = lgBtn.getAttribute('aria-expanded') !== 'true';
+      lgBtn.setAttribute('aria-expanded', String(open));
+      try { localStorage.setItem(LKEY, open ? 'open' : 'closed'); } catch (e) {}
+    });
+  }
+
+  // ── โมเดลของผัง ─────────────────────────────────────────────────────
+  var nodeEls = {}, off = {};             // off[id] = [dx, dy]
+  [].forEach.call(svg.querySelectorAll('g.node'), function (g) {
+    var id = g.dataset.id;
+    if (!id) return;
+    nodeEls[id] = g;
+    off[id] = [0, 0];
+  });
+
+  var E = [];                             // E[i] = {path, hit, dot, label, pts, from, to}
+  [].forEach.call(svg.querySelectorAll('path[data-e]'), function (p) {
+    var i = +p.dataset.e;
+    E[i] = {
+      path: p, from: p.dataset.from, to: p.dataset.to,
+      pts: (p.dataset.pts || '').split(' ').filter(Boolean).map(function (s) {
+        var a = s.split(','); return [+a[0], +a[1]];
+      }),
+      dot: svg.querySelector('circle.e-dot[data-e="' + i + '"]'),
+      label: svg.querySelector('g.edge-label[data-e="' + i + '"]')
+    };
+    var hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    hit.setAttribute('class', 'e-hit');
+    hit.dataset.e = String(i);
+    hit.setAttribute('d', p.getAttribute('d'));
+    p.parentNode.insertBefore(hit, p);
+    E[i].hit = hit;
+  });
+
+  function clonePts(ps) { return ps.map(function (q) { return [q[0], q[1]]; }); }
+
+  function roundedPath(ps, r) {
+    var d = ['M ' + ps[0][0].toFixed(1) + ' ' + ps[0][1].toFixed(1)];
+    for (var i = 1; i < ps.length - 1; i++) {
+      var p0 = ps[i - 1], p1 = ps[i], p2 = ps[i + 1];
+      var d0 = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+      var d1 = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+      var r1 = Math.min(r, d0 / 2, d1 / 2);
+      if (!(r1 > 0.1)) continue;
+      var v0 = [p1[0] - p0[0], p1[1] - p0[1]], v1 = [p2[0] - p1[0], p2[1] - p1[1]];
+      var n0 = d0 || 1, n1 = d1 || 1;
+      var a = [p1[0] - v0[0] / n0 * r1, p1[1] - v0[1] / n0 * r1];
+      var b = [p1[0] + v1[0] / n1 * r1, p1[1] + v1[1] / n1 * r1];
+      var sweep = (v0[0] * v1[1] - v0[1] * v1[0]) > 0 ? 1 : 0;
+      d.push('L ' + a[0].toFixed(1) + ' ' + a[1].toFixed(1));
+      d.push('A ' + r1.toFixed(1) + ' ' + r1.toFixed(1) + ' 0 0 ' + sweep +
+             ' ' + b[0].toFixed(1) + ' ' + b[1].toFixed(1));
+    }
+    var last = ps[ps.length - 1];
+    d.push('L ' + last[0].toFixed(1) + ' ' + last[1].toFixed(1));
+    return d.join(' ');
+  }
+
+  function pointAt(ps, dist) {
+    var left = dist;
+    for (var i = 0; i < ps.length - 1; i++) {
+      var a = ps[i], b = ps[i + 1];
+      var L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (left <= L || i === ps.length - 2) {
+        var t = L ? left / L : 0;
+        t = Math.max(0, Math.min(1, t));
+        return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+      }
+      left -= L;
+    }
+    return ps[0];
+  }
+
+  function drawEdge(i) {
+    var e = E[i];
+    if (!e) return;
+    var d = roundedPath(e.pts, ELBOW);
+    e.path.setAttribute('d', d);
+    e.hit.setAttribute('d', d);
+    if (e.dot) {
+      e.dot.setAttribute('cx', e.pts[0][0].toFixed(1));
+      e.dot.setAttribute('cy', e.pts[0][1].toFixed(1));
+    }
+    if (e.label) {
+      var pos = pointAt(e.pts, +e.label.dataset.dist || 0);
+      var lw = +e.label.dataset.lw || 40;
+      var rect = e.label.querySelector('rect'), txt = e.label.querySelector('text');
+      if (rect) {
+        rect.setAttribute('x', (pos[0] - lw / 2).toFixed(1));
+        rect.setAttribute('y', (pos[1] - 15).toFixed(1));
+      }
+      if (txt) {
+        txt.setAttribute('x', pos[0].toFixed(1));
+        txt.setAttribute('y', pos[1].toFixed(1));
+      }
+    }
+  }
+
+  function draw() {
+    Object.keys(off).forEach(function (id) {
+      var o = off[id];
+      if (o[0] || o[1]) nodeEls[id].setAttribute('transform', 'translate(' + o[0] + ',' + o[1] + ')');
+      else nodeEls[id].removeAttribute('transform');
+    });
+    for (var i = 0; i < E.length; i++) drawEdge(i);
+  }
+
+  // ── เลื่อนกล่อง: ปลายเส้นตามไปด้วย และยังตั้งฉากเหมือนเดิม ───────────
+  function expand(ps) {                   // เส้นตรง 2 จุด → 4 จุด จะได้พับได้
+    if (ps.length !== 2) return ps;
+    var a = ps[0], b = ps[1];
+    if (Math.abs(a[1] - b[1]) <= Math.abs(a[0] - b[0])) {
+      var mx = (a[0] + b[0]) / 2;
+      return [a, [mx, a[1]], [mx, b[1]], b];
+    }
+    var my = (a[1] + b[1]) / 2;
+    return [a, [a[0], my], [b[0], my], b];
+  }
+
+  function moveEnd(ps, head, dx, dy) {
+    var p = expand(clonePts(ps)), n = p.length;
+    if (head) {
+      var a = p[0], b = p[1];
+      var horiz = Math.abs(a[1] - b[1]) <= Math.abs(a[0] - b[0]);
+      p[0] = [a[0] + dx, a[1] + dy];
+      p[1] = horiz ? [b[0], p[0][1]] : [p[0][0], b[1]];
+    } else {
+      var z = p[n - 1], y = p[n - 2];
+      var horiz2 = Math.abs(z[1] - y[1]) <= Math.abs(z[0] - y[0]);
+      p[n - 1] = [z[0] + dx, z[1] + dy];
+      p[n - 2] = horiz2 ? [y[0], p[n - 1][1]] : [p[n - 1][0], y[1]];
+    }
+    return p;
+  }
+
+  // ── ลากเส้น: เลื่อนช่วงหนึ่งของเส้นตั้งฉาก ปลายยังเกาะกล่องเดิม ──────
+  function nearestSeg(ps, x, y) {
+    var best = 0, bd = Infinity;
+    for (var i = 0; i < ps.length - 1; i++) {
+      var a = ps[i], b = ps[i + 1];
+      var vx = b[0] - a[0], vy = b[1] - a[1], L2 = vx * vx + vy * vy;
+      var t = L2 ? Math.max(0, Math.min(1, ((x - a[0]) * vx + (y - a[1]) * vy) / L2)) : 0;
+      var d = Math.hypot(x - (a[0] + vx * t), y - (a[1] + vy * t));
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
+  }
+
+  function shiftSeg(base, i, dx, dy) {
+    var p = clonePts(base), n = p.length;
+    var a = p[i], b = p[i + 1];
+    var horiz = Math.abs(a[1] - b[1]) <= Math.abs(a[0] - b[0]);
+    if (horiz) { p[i][1] += dy; p[i + 1][1] += dy; }
+    else { p[i][0] += dx; p[i + 1][0] += dx; }
+    if (i + 1 === n - 1) p.push([base[n - 1][0], base[n - 1][1]]);
+    if (i === 0) p.unshift([base[0][0], base[0][1]]);
+    return p;
+  }
+
+  // ── ย้อน / ทำซ้ำ ────────────────────────────────────────────────────
+  var undo = [], redo = [];
+  function snap() {
+    return JSON.stringify({
+      o: off,
+      e: E.map(function (e) { return e ? e.pts : null; })
+    });
+  }
+  function restore(s) {
+    var d = JSON.parse(s);
+    off = d.o;
+    for (var i = 0; i < E.length; i++) if (E[i] && d.e[i]) E[i].pts = d.e[i];
+    draw();
+    paintBtns();
+  }
+  var bUndo = document.getElementById('ed-undo'),
+      bRedo = document.getElementById('ed-redo'),
+      bReset = document.getElementById('ed-reset'),
+      dirty = document.getElementById('ed-dirty');
+  function paintBtns() {
+    if (bUndo) bUndo.disabled = !undo.length;
+    if (bRedo) bRedo.disabled = !redo.length;
+    if (bReset) bReset.disabled = !undo.length && !redo.length;
+    if (dirty) dirty.hidden = !undo.length;
+  }
+  function begin() { undo.push(snap()); redo = []; paintBtns(); }
+  function doUndo() {
+    if (!undo.length) return;
+    redo.push(snap());
+    restore(undo.pop());
+  }
+  function doRedo() {
+    if (!redo.length) return;
+    undo.push(snap());
+    restore(redo.pop());
+  }
+  if (bUndo) bUndo.addEventListener('click', doUndo);
+  if (bRedo) bRedo.addEventListener('click', doRedo);
+  var base0 = snap();
+  if (bReset) bReset.addEventListener('click', function () {
+    if (!undo.length && !redo.length) return;
+    begin();                     // คืนตำแหน่งเดิมก็ย้อนได้ ไม่ใช่ทางเดียว
+    restore(base0);
+  });
+
+  // ── จับการลาก ───────────────────────────────────────────────────────
+  var drag = null;
+  svg.addEventListener('pointerdown', function (ev) {
+    var g = ev.target.closest ? ev.target.closest('g.node') : null;
+    var hit = ev.target.classList && ev.target.classList.contains('e-hit') ? ev.target : null;
+    if (!g && !hit) return;
+    ev.preventDefault();
+    begin();
+    var kk = k();
+    if (g) {
+      var id = g.dataset.id;
+      drag = {
+        kind: 'node', id: id, x: ev.clientX, y: ev.clientY,
+        o: [off[id][0], off[id][1]],
+        edges: E.map(function (e, i) {
+          if (!e) return null;
+          if (e.from !== id && e.to !== id) return null;
+          return { i: i, head: e.from === id, base: clonePts(e.pts) };
+        }).filter(Boolean)
+      };
+      g.classList.add('dragging');
+    } else {
+      var i2 = +hit.dataset.e, e2 = E[i2];
+      var r = svg.getBoundingClientRect();
+      var sx = (ev.clientX - r.left) / kk, sy = (ev.clientY - r.top) / kk;
+      drag = { kind: 'edge', i: i2, x: ev.clientX, y: ev.clientY,
+               seg: nearestSeg(e2.pts, sx, sy), base: clonePts(e2.pts) };
+    }
+    svg.setPointerCapture(ev.pointerId);
+  });
+
+  svg.addEventListener('pointermove', function (ev) {
+    if (!drag) return;
+    var kk = k();
+    var dx = (ev.clientX - drag.x) / kk, dy = (ev.clientY - drag.y) / kk;
+    if (drag.kind === 'node') {
+      off[drag.id] = [drag.o[0] + dx, drag.o[1] + dy];
+      drag.edges.forEach(function (m) {
+        E[m.i].pts = moveEnd(m.base, m.head, dx, dy);
+        drawEdge(m.i);
+      });
+      var g2 = nodeEls[drag.id];
+      g2.setAttribute('transform', 'translate(' + off[drag.id][0] + ',' + off[drag.id][1] + ')');
+    } else {
+      E[drag.i].pts = shiftSeg(drag.base, drag.seg, dx, dy);
+      drawEdge(drag.i);
+    }
+  });
+
+  function endDrag(ev) {
+    if (!drag) return;
+    var g3 = nodeEls[drag.id];
+    if (g3) g3.classList.remove('dragging');
+    if (ev && ev.pointerId !== undefined && svg.hasPointerCapture(ev.pointerId)) {
+      svg.releasePointerCapture(ev.pointerId);
+    }
+    drag = null;
+    paintBtns();
+  }
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
+
+  // ── คีย์ลัด ─────────────────────────────────────────────────────────
+  addEventListener('keydown', function (ev) {
+    var t = ev.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    var mod = ev.metaKey || ev.ctrlKey;
+    if (!mod) return;
+    var key = ev.key;
+    if (key === 'z' || key === 'Z') {
+      ev.preventDefault();
+      if (ev.shiftKey) doRedo(); else doUndo();
+    } else if (key === 'y') {
+      ev.preventDefault(); doRedo();
+    } else if (key === '=' || key === '+') {
+      ev.preventDefault(); step(1.25);
+    } else if (key === '-' || key === '_') {
+      ev.preventDefault(); step(0.8);
+    } else if (key === '0') {
+      ev.preventDefault(); scale = 1; paintZoom();
+    } else if (key === '9') {
+      ev.preventDefault(); scale = null; paintZoom();
+    }
+  });
+
+  paintBtns();
+  paintZoom();
+})();
+
 </script>
 <script type="application/json" id="flow-meta">
 {
