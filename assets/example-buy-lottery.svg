@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="6722" height="3438"
+  viewBox="0 0 6722 3438" role="img" aria-label="ซื้อลอตเตอรี่ (ตัวอย่างอ้างอิง)">
+<title>ซื้อลอตเตอรี่ (ตัวอย่างอ้างอิง)</title>
+<style>
+  text { text-anchor:middle; dominant-baseline:central; font-weight:600;
+    font-family:'Sarabun','Noto Sans Thai','Helvetica Neue',sans-serif; }
+  .n-rect, .n-oval, .n-chip, .n-dia { fill:#3B5BDB; stroke:none; }
+  .n-note { fill:#FFFBEC; stroke:#F5B400; stroke-width:2; stroke-dasharray:8 6; }
+  .t-on { fill:#fff; } .t-ink { fill:#17181C; } .t-note { fill:#8A6100; }
+  .e-solid { fill:none; stroke:#3B5BDB; stroke-width:3; }
+  .e-back { fill:none; stroke:#3B5BDB; stroke-width:3; stroke-dasharray:9 8; }
+  .e-perm { fill:none; stroke:#F5B400; stroke-width:4; stroke-dasharray:10 8;
+    stroke-linecap:round; }
+  .e-dot { fill:#3B5BDB; }
+  .edge-label rect { fill:#FFFFFF; stroke:none; }
+  .l-yes { fill:#16A34A; font-weight:700; }
+  .l-no { fill:#DC2626; font-weight:700; }
+  .l-neutral { fill:#6B7280; font-weight:700; }
+</style>
+<rect width="6722" height="3438" fill="#FFFFFF"/>
+<defs>
+  <marker id="arw" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
+    markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1 L10 6 L2 11" fill="none" stroke="#3B5BDB" stroke-width="2.4"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arw-perm" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
+    markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1 L10 6 L2 11" fill="none" stroke="#F5B400" stroke-width="2.4"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+<path class="e-solid" marker-end="url(#arw)" d="M 449.0 329.0 L 949.0 329.0"/>
+<circle class="e-dot" cx="449.0" cy="329.0" r="6"/>
+<path class="e-solid" marker-end="url(#arw)" d="M 1253.0 329.0 L 2453.0 329.0"/>
+<path class="e-solid" marker-end="url(#arw)" d="M 1101.0 433.0 L 1101.0 477.0 A 16.0 16.0 0 0 0 1117.0 493.0 L 1562.0 493.0 A 16.0 16.0 0 0 1 1578.0 509.0 L 1578.0 945.0 A 16.0 16.0 0 0 0 1594.0 961.0 L 1753.0 961.0"/>
+<path class="e-solid" marker-end="url(#arw)" d="M 1953.0 961.0 L 2262.0 961.0 A 16.0 16.0 0 0 0 2278.0 945.0 L 2278.0 345.0 A 16.0 16.0 0 0 1 2294.0 329.0 L 2453.0 329.0"/>
+<circle class="e-dot" cx="1953.0" cy="961.0" r="6"/>
+<path class="e-solid" marker-end="url(#arw)" d="M 2757.0 329.0 L 3957.0 329.0"/>
+<path class="e-solid" marker-end="url(#arw)" d="M 2605.0 433.0 L 2605.0 477.0 A 16.0 16.0 0 0 0 2621.0 493.0 L 3066.0 493.0 A 16.0 16.0 0 0 1 3082.0 509.0 L 3082.0 2057.0 A 16.0 16.0 0 0 0 3098.0 2073.0 L 3257.0 2073.0"/>
+<path class="e-solid" marker-end="url(#arw)" d="M 3457.0 2073.0 L 3766.0 2073.0 A 16.0 16.0 0 0 0 3782.0 2057.0 L 3782.0 345.0 A 16.0 16.0 0 0 1 3798.0 329.0 L 3957.0 329.0"/>
+<circle class="e-dot" cx="3457.0" cy="2073.0" r="6"/>
+<path class="e-solid" marker-end="url(#arw)" d="M 4261.0 329.0 L 5461.0 329.0"/>
+<path class="e-solid" marker-end="url(#arw)" d="M 4109.0 433.0 L 4109.0 477.0 A 16.0 16.0 0 0 0 4125.0 493.0 L 4570.0 493.0 A 16.0 16.0 0 0 1 4586.0 509.0 L 4586.0 2613.0 A 16.0 16.0 0 0 0 4602.0 2629.0 L 4761.0 2629.0"/>
+<path class="e-solid" marker-end="url(#arw)" d="M 4961.0 2629.0 L 5270.0 2629.0 A 16.0 16.0 0 0 0 5286.0 2613.0 L 5286.0 345.0 A 16.0 16.0 0 0 1 5302.0 329.0 L 5461.0 329.0"/>
+<circle class="e-dot" cx="4961.0" cy="2629.0" r="6"/>
+<path class="e-solid" marker-end="url(#arw)" d="M 5661.0 329.0 L 6217.0 329.0"/>
+<circle class="e-dot" cx="5661.0" cy="329.0" r="6"/>
+<path class="e-back" marker-end="url(#arw)" d="M 3357.0 2045.0 L 3357.0 1180.0 A 16.0 16.0 0 0 0 3341.0 1164.0 L 1869.0 1164.0 A 16.0 16.0 0 0 1 1853.0 1148.0 L 1853.0 989.0"/>
+<circle class="e-dot" cx="3357.0" cy="2045.0" r="6"/>
+<path class="e-solid" marker-end="url(#arw)" d="M 1953.0 961.0 L 2262.0 961.0 A 16.0 16.0 0 0 1 2278.0 977.0 L 2278.0 1501.0 A 16.0 16.0 0 0 0 2294.0 1517.0 L 2527.0 1517.0"/>
+<circle class="e-dot" cx="1953.0" cy="961.0" r="6"/>
+<path class="e-perm" marker-end="url(#arw-perm)" d="M 5561.0 357.0 L 5561.0 401.0 A 16.0 16.0 0 0 0 5577.0 417.0 L 5970.0 417.0 A 16.0 16.0 0 0 1 5986.0 433.0 L 5986.0 3169.0 A 16.0 16.0 0 0 0 6002.0 3185.0 L 6161.0 3185.0"/>
+<rect class="n-oval" x="225.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
+    <text class="t-on" x="337.0" y="329.0" font-size="16">กดซื้อ</text>
+    <path class="n-dia" d="M 1087.8 234.0 A 16.0 16.0 0 0 1 1114.2 234.0 L 1239.8 320.0 A 16.0 16.0 0 0 1 1239.8 338.0 L 1114.2 424.0 A 16.0 16.0 0 0 1 1087.8 424.0 L 962.2 338.0 A 16.0 16.0 0 0 1 962.2 320.0 Z"/>
+    <text class="t-on" x="1101.0" y="317.0" font-size="16">ล็อกอินแล้ว</text>
+    <text class="t-on" x="1101.0" y="341.0" font-size="16">ใช่หรือไม่?</text>
+    <rect class="n-rect" x="1753.0" y="933.0" width="200.0" height="56.0" rx="16"/>
+    <text class="t-on" x="1853.0" y="961.0" font-size="16">หน้าเข้าสู่ระบบ</text>
+    <path class="n-dia" d="M 2591.8 234.0 A 16.0 16.0 0 0 1 2618.2 234.0 L 2743.8 320.0 A 16.0 16.0 0 0 1 2743.8 338.0 L 2618.2 424.0 A 16.0 16.0 0 0 1 2591.8 424.0 L 2466.2 338.0 A 16.0 16.0 0 0 1 2466.2 320.0 Z"/>
+    <text class="t-on" x="2605.0" y="317.0" font-size="16">ยืนยันตัวตน (KYC)</text>
+    <text class="t-on" x="2605.0" y="341.0" font-size="16">แล้ว ใช่หรือไม่?</text>
+    <rect class="n-rect" x="3257.0" y="2045.0" width="200.0" height="56.0" rx="16"/>
+    <text class="t-on" x="3357.0" y="2073.0" font-size="16">หน้ายืนยันตัวตน</text>
+    <path class="n-dia" d="M 4095.8 234.0 A 16.0 16.0 0 0 1 4122.2 234.0 L 4247.8 320.0 A 16.0 16.0 0 0 1 4247.8 338.0 L 4122.2 424.0 A 16.0 16.0 0 0 1 4095.8 424.0 L 3970.2 338.0 A 16.0 16.0 0 0 1 3970.2 320.0 Z"/>
+    <text class="t-on" x="4109.0" y="305.0" font-size="16">ยอดเงินในกระ</text>
+    <text class="t-on" x="4109.0" y="329.0" font-size="16">เป๋าพอ</text>
+    <text class="t-on" x="4109.0" y="353.0" font-size="16">ใช่หรือไม่?</text>
+    <rect class="n-rect" x="4761.0" y="2601.0" width="200.0" height="56.0" rx="16"/>
+    <text class="t-on" x="4861.0" y="2629.0" font-size="16">หน้าเติมเงิน</text>
+    <rect class="n-rect" x="5461.0" y="301.0" width="200.0" height="56.0" rx="16"/>
+    <text class="t-on" x="5561.0" y="329.0" font-size="16">หน้าชำระเงิน</text>
+    <rect class="n-oval" x="6217.0" y="301.0" width="224.0" height="56.0" rx="28.0"/>
+    <text class="t-on" x="6329.0" y="329.0" font-size="16">ซื้อสำเร็จ</text>
+    <rect class="n-chip" x="2527.0" y="1489.0" width="156.0" height="56.0" rx="8"/>
+    <text class="t-on" x="2605.0" y="1517.0" font-size="16">Flow ยืนยัน OTP</text>
+    <rect class="n-note" x="6161.0" y="3157.0" width="336.0" height="56.0" rx="16"/>
+    <text class="t-note" x="6329.0" y="3185.0" font-size="13">ตัดเงินไม่ผ่าน / สลากถูกคนอื่นซื้อตัด / หมดเวลาจอง</text>
+<g class="edge-label"><rect x="1332.3" y="314.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="1353.0" y="329.0" font-size="13">Yes</text></g>
+<g class="edge-label"><rect x="1123.7" y="478.0" width="34.6" height="30" rx="8"/><text class="l-no" x="1141.0" y="493.0" font-size="13">No</text></g>
+<g class="edge-label"><rect x="2836.3" y="314.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="2857.0" y="329.0" font-size="13">Yes</text></g>
+<g class="edge-label"><rect x="2627.7" y="478.0" width="34.6" height="30" rx="8"/><text class="l-no" x="2645.0" y="493.0" font-size="13">No</text></g>
+<g class="edge-label"><rect x="4340.3" y="314.0" width="41.3" height="30" rx="8"/><text class="l-yes" x="4361.0" y="329.0" font-size="13">Yes</text></g>
+<g class="edge-label"><rect x="4131.7" y="478.0" width="34.6" height="30" rx="8"/><text class="l-no" x="4149.0" y="493.0" font-size="13">No</text></g>
+</svg>

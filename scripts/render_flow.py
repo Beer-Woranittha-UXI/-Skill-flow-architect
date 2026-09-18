@@ -750,6 +750,35 @@ def render(src, out_path=None, title=None, tokens=None):
     ledger = build_ledger(flow_meta)
     head = title or flow_meta["flow"] or "User Flow"
     svg_nodes = "\n    ".join(node_svg(nodes[i]) for i in order)
+    out_path = out_path or os.path.splitext(src)[0] + ".html"
+    stem = os.path.splitext(out_path)[0]
+
+    # ── ไฟล์รูปแยก สำหรับแปะ Jira / Lark / ส่ง dev ──────────────────────
+    # ทำก่อน HTML เพื่อให้ exports ที่ฝังใน .html ตรงกับ .meta.json
+    alt = esc(flow_meta["flow"] or "User Flow")
+    tok = {f"t_{k}": v for k, v in TOKENS.items()}
+    body = "\n".join(edge_svg) + "\n" + svg_nodes + "\n" + "\n".join(label_svg)
+    svg_path = stem + ".svg"
+    with open(svg_path, "w", encoding="utf-8") as fh:
+        fh.write(SVG_TMPL.format(W=round(W), H=round(H), alt=alt,
+                                 edges="\n".join(edge_svg), nodes=svg_nodes,
+                                 labels="\n".join(label_svg), **tok))
+
+    # .png ต้องผ่านผืนจัตุรัสก่อน เพราะ qlmanage คืนรูปจัตุรัสเสมอ (ดู write_png)
+    side = max(round(W), round(H))
+    square_svg = SVG_TMPL.format(
+        W=side, H=side, alt=alt,
+        edges=f'<g transform="translate({(side - W) / 2:.1f},{(side - H) / 2:.1f})">'
+              f"\n{body}\n</g>",
+        nodes="", labels="", **tok)
+    png_path = write_png(square_svg, stem + ".png", W, H, side,
+                         max(1200, min(side, 4000)))
+    flow_meta["exports"] = {
+        "html": os.path.basename(out_path),
+        "svg": os.path.basename(svg_path),
+        "png": os.path.basename(png_path) if png_path else None,
+    }
+
     html = HTML_TMPL.format(
         title=esc(head), flow=esc(flow_meta["flow"]),
         goal=esc(meta["GOAL"]), owner=esc(meta["OWNER"]), date=esc(meta["DATE"]),
@@ -759,14 +788,88 @@ def render(src, out_path=None, title=None, tokens=None):
         nodes=svg_nodes, meta=json.dumps(flow_meta, ensure_ascii=False, indent=1),
         counts=f"{len([n for n in order if not n.endswith('__perm')])} กล่อง · "
                f"{len([e for e in edges if e['type'] != EDGE_PERM])} เส้น",
-        **{f"t_{k}": v for k, v in TOKENS.items()})
-
-    out_path = out_path or os.path.splitext(src)[0] + ".html"
+        **tok)
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(html)
-    with open(os.path.splitext(out_path)[0] + ".meta.json", "w", encoding="utf-8") as fh:
+    with open(stem + ".meta.json", "w", encoding="utf-8") as fh:
         json.dump(flow_meta, fh, ensure_ascii=False, indent=1)
     return out_path, flow_meta
+
+
+SVG_TMPL = """<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}"
+  viewBox="0 0 {W} {H}" role="img" aria-label="{alt}">
+<title>{alt}</title>
+<style>
+  text {{ text-anchor:middle; dominant-baseline:central; font-weight:600;
+    font-family:'Sarabun','Noto Sans Thai','Helvetica Neue',sans-serif; }}
+  .n-rect, .n-oval, .n-chip, .n-dia {{ fill:{t_primary}; stroke:none; }}
+  .n-note {{ fill:#FFFBEC; stroke:{t_perm}; stroke-width:2; stroke-dasharray:8 6; }}
+  .t-on {{ fill:#fff; }} .t-ink {{ fill:{t_ink}; }} .t-note {{ fill:#8A6100; }}
+  .e-solid {{ fill:none; stroke:{t_primary}; stroke-width:3; }}
+  .e-back {{ fill:none; stroke:{t_primary}; stroke-width:3; stroke-dasharray:9 8; }}
+  .e-perm {{ fill:none; stroke:{t_perm}; stroke-width:4; stroke-dasharray:10 8;
+    stroke-linecap:round; }}
+  .e-dot {{ fill:{t_primary}; }}
+  .edge-label rect {{ fill:{t_paper}; stroke:none; }}
+  .l-yes {{ fill:{t_yes}; font-weight:700; }}
+  .l-no {{ fill:{t_no}; font-weight:700; }}
+  .l-neutral {{ fill:{t_muted}; font-weight:700; }}
+</style>
+<rect width="{W}" height="{H}" fill="{t_paper}"/>
+<defs>
+  <marker id="arw" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
+    markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1 L10 6 L2 11" fill="none" stroke="{t_primary}" stroke-width="2.4"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arw-perm" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
+    markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1 L10 6 L2 11" fill="none" stroke="{t_perm}" stroke-width="2.4"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+{edges}
+{nodes}
+{labels}
+</svg>
+"""
+
+
+def write_png(square_svg, png_path, W, H, side, px):
+    """แปลงผังเป็น .png ด้วย qlmanage + sips ที่ macOS แถมมาให้ (ไม่ต้องลงอะไรเพิ่ม)
+
+    qlmanage คืนรูปเป็นสี่เหลี่ยมจัตุรัสเสมอ ถ้าส่ง SVG แนวนอนเข้าไปตรง ๆ ขวาจะโดนตัด
+    จึงวางผังไว้กลางผืนจัตุรัสก่อน แล้วค่อย crop กลับเป็นอัตราส่วนจริง
+
+    เครื่องที่ไม่มี qlmanage/sips (Windows/Linux) ข้ามไปเงียบ ๆ ไม่ถือเป็น error
+    """
+    import shutil
+    import subprocess
+    import tempfile
+
+    if not (shutil.which("qlmanage") and shutil.which("sips")):
+        return None
+    with tempfile.TemporaryDirectory() as tmp:
+        sq_path = os.path.join(tmp, "square.svg")
+        with open(sq_path, "w", encoding="utf-8") as fh:
+            fh.write(square_svg)
+        try:
+            subprocess.run(["qlmanage", "-t", "-s", str(px), "-o", tmp, sq_path],
+                           check=True, capture_output=True, timeout=180)
+            made = [f for f in os.listdir(tmp) if f.lower().endswith(".png")]
+            if not made:
+                return None
+            shot = os.path.join(tmp, made[0])
+            scale = px / side
+            subprocess.run(
+                ["sips", "--cropToHeightWidth",
+                 str(max(1, round(H * scale))), str(max(1, round(W * scale))), shot],
+                check=True, capture_output=True, timeout=120)
+            shutil.move(shot, png_path)
+        except (subprocess.SubprocessError, OSError):
+            return None
+    return png_path
 
 
 LEDGER_LIMIT = 0.40
@@ -999,6 +1102,11 @@ def main():
     print(f"  {len(m['nodes'])} nodes · {len(m['edges'])} edges · "
           f"canvas {m['canvas']['w']}×{m['canvas']['h']} · "
           f"diamond {m['geometry']['diamond']['w']}×{m['geometry']['diamond']['h']}")
+    ex = m.get("exports", {})
+    made = [v for v in (ex.get("html"), ex.get("svg"), ex.get("png")) if v]
+    print(f"  ไฟล์ที่ได้: {' · '.join(made)}")
+    if not ex.get("png"):
+        print("  (ไม่ได้ .png — เครื่องนี้ไม่มี qlmanage ของ macOS ใช้ .svg แทนได้)")
 
 
 if __name__ == "__main__":
