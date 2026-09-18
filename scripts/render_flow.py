@@ -184,6 +184,29 @@ class FlowError(Exception):
     pass
 
 
+AUTHOR_RE = re.compile(r"\[AI-([A-Za-z0-9_.-]+)\]\s*(.*)")
+
+
+def authorship(comment):
+    """คอมเมนต์ท้ายบรรทัดที่ขึ้นต้นด้วย [AI-xx] = บรรทัดนี้มาจากข้อเสนอของ AI
+
+    คอมเมนต์อื่นไม่นับเป็น authorship — ของดีไซเนอร์ถือเป็นค่าตั้งต้นเสมอ
+    """
+    m = AUTHOR_RE.search(comment or "")
+    if not m:
+        return {"author": "human"}
+    return {"author": "ai", "ai_id": m.group(1), "note": m.group(2).strip()}
+
+
+def author_fields(d):
+    """หยิบเฉพาะ field authorship ที่มีจริง — ของเดิมที่ไม่มีจะได้ human เป็นค่าตั้งต้น"""
+    out = {"author": d.get("author", "human")}
+    for k in ("ai_id", "note"):
+        if d.get(k):
+            out[k] = d[k]
+    return out
+
+
 def parse(path):
     meta = {"FLOW": "", "GOAL": "", "OWNER": "", "DATE": "", "NOTE": ""}
     spacing = {"edge": 500.0, "label": 100.0}
@@ -193,9 +216,14 @@ def parse(path):
         raw = fh.readlines()
 
     for ln, line in enumerate(raw, 1):
-        line = line.split("#")[0].rstrip() if not line.strip().startswith("#") else ""
+        if line.strip().startswith("#"):
+            line, comment = "", ""
+        else:
+            line, _, comment = line.partition("#")
+            line, comment = line.rstrip(), comment.strip()
         if not line.strip():
             continue
+        who = authorship(comment)
         head, _, rest = line.strip().partition(" ")
         key = head.upper()
         rest = rest.strip()
@@ -211,7 +239,7 @@ def parse(path):
             continue
         if key == "PERM":
             nid, _, text = rest.partition(" ")
-            perms.append((nid, text.strip() or "มี Permutation (Edge Case)", ln))
+            perms.append((nid, text.strip() or "มี Permutation (Edge Case)", ln, who))
             continue
         if key in ALIAS or key in SHAPE:
             kind = ALIAS.get(key, key)
@@ -222,7 +250,8 @@ def parse(path):
                 raise FlowError(f"บรรทัด {ln}: node {nid} ยังไม่มีข้อความ")
             if nid in nodes:
                 raise FlowError(f"บรรทัด {ln}: id '{nid}' ซ้ำ")
-            nodes[nid] = {"id": nid, "kind": kind, "label": label.strip(), "line": ln}
+            nodes[nid] = {"id": nid, "kind": kind, "label": label.strip(),
+                          "line": ln, **who}
             order.append(nid)
             continue
 
@@ -246,16 +275,19 @@ def parse(path):
                 etype, label = EDGE_NO, "No"
             else:
                 etype = EDGE_SOLID
-        edges.append({"src": src, "dst": dst, "type": etype, "label": label, "line": ln})
+        edges.append({"src": src, "dst": dst, "type": etype, "label": label,
+                      "line": ln, **who})
 
     # PERM sugar -> a real note node + a perm edge, so it lays out like anything else
-    for nid, text, ln in perms:
+    for nid, text, ln, who in perms:
         if nid not in nodes:
             raise FlowError(f"บรรทัด {ln}: PERM ชี้ไป node '{nid}' ที่ไม่มีอยู่")
         note = f"{nid}__perm"
-        nodes[note] = {"id": note, "kind": "PERMNOTE", "label": text, "line": ln}
+        nodes[note] = {"id": note, "kind": "PERMNOTE", "label": text,
+                       "line": ln, **who}
         order.append(note)
-        edges.append({"src": nid, "dst": note, "type": EDGE_PERM, "label": "", "line": ln})
+        edges.append({"src": nid, "dst": note, "type": EDGE_PERM, "label": "",
+                      "line": ln, **who})
         nodes[nid]["has_perm"] = True
 
     for e in edges:
@@ -695,6 +727,7 @@ def render(src, out_path=None, title=None, tokens=None):
             "label_pos": lab, "crosses": hits_node(pts, nodes, {e["src"], e["dst"]}),
             "outside_canvas": outside_canvas,
             "line": e["line"],
+            **author_fields(e),
         })
 
     flow_meta = {
@@ -708,7 +741,8 @@ def render(src, out_path=None, title=None, tokens=None):
         "nodes": [{"id": n["id"], "kind": n["kind"], "label": n["label"],
                    "x": round(n["x"], 1), "y": round(n["y"], 1),
                    "w": n["w"], "h": n["h"], "rank": n["rank"], "col": n["col"],
-                   "line": n["line"]} for n in (nodes[i] for i in order)],
+                   "line": n["line"], **author_fields(n)}
+                  for n in (nodes[i] for i in order)],
         "edges": meta_edges,
     }
 

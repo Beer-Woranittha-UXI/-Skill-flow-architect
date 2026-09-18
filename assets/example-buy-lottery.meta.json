@@ -33,7 +33,8 @@
    "h": 56,
    "rank": 0,
    "col": 0,
-   "line": 7
+   "line": 7,
+   "author": "human"
   },
   {
    "id": "d1",
@@ -45,7 +46,8 @@
    "h": 208,
    "rank": 1,
    "col": 0,
-   "line": 8
+   "line": 8,
+   "author": "human"
   },
   {
    "id": "p1",
@@ -57,7 +59,8 @@
    "h": 56,
    "rank": 2,
    "col": 1,
-   "line": 9
+   "line": 9,
+   "author": "human"
   },
   {
    "id": "d2",
@@ -69,7 +72,8 @@
    "h": 208,
    "rank": 3,
    "col": 0,
-   "line": 10
+   "line": 10,
+   "author": "human"
   },
   {
    "id": "p2",
@@ -81,7 +85,8 @@
    "h": 56,
    "rank": 4,
    "col": 3,
-   "line": 11
+   "line": 11,
+   "author": "human"
   },
   {
    "id": "d3",
@@ -93,7 +98,8 @@
    "h": 208,
    "rank": 5,
    "col": 0,
-   "line": 12
+   "line": 12,
+   "author": "human"
   },
   {
    "id": "p3",
@@ -105,7 +111,8 @@
    "h": 56,
    "rank": 6,
    "col": 4,
-   "line": 13
+   "line": 13,
+   "author": "human"
   },
   {
    "id": "p4",
@@ -117,7 +124,8 @@
    "h": 56,
    "rank": 7,
    "col": 0,
-   "line": 14
+   "line": 14,
+   "author": "human"
   },
   {
    "id": "e1",
@@ -129,7 +137,8 @@
    "h": 56,
    "rank": 8,
    "col": 0,
-   "line": 15
+   "line": 15,
+   "author": "human"
   },
   {
    "id": "l1",
@@ -141,7 +150,8 @@
    "h": 56,
    "rank": 3,
    "col": 2,
-   "line": 16
+   "line": 16,
+   "author": "human"
   },
   {
    "id": "p4__perm",
@@ -153,7 +163,8 @@
    "h": 56,
    "rank": 8,
    "col": 5,
-   "line": 32
+   "line": 32,
+   "author": "human"
   }
  ],
  "edges": [
@@ -168,7 +179,8 @@
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
-   "line": 18
+   "line": 18,
+   "author": "human"
   },
   {
    "src": "d1",
@@ -185,7 +197,8 @@
    },
    "crosses": [],
    "outside_canvas": false,
-   "line": 19
+   "line": 19,
+   "author": "human"
   },
   {
    "src": "d1",
@@ -202,7 +215,8 @@
    },
    "crosses": [],
    "outside_canvas": false,
-   "line": 20
+   "line": 20,
+   "author": "human"
   },
   {
    "src": "p1",
@@ -215,7 +229,8 @@
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
-   "line": 21
+   "line": 21,
+   "author": "human"
   },
   {
    "src": "d2",
@@ -232,7 +247,8 @@
    },
    "crosses": [],
    "outside_canvas": false,
-   "line": 22
+   "line": 22,
+   "author": "human"
   },
   {
    "src": "d2",
@@ -249,7 +265,8 @@
    },
    "crosses": [],
    "outside_canvas": false,
-   "line": 23
+   "line": 23,
+   "author": "human"
   },
   {
    "src": "p2",
@@ -262,7 +279,8 @@
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
-   "line": 24
+   "line": 24,
+   "author": "human"
   },
   {
    "src": "d3",
@@ -279,7 +297,8 @@
    },
    "crosses": [],
    "outside_canvas": false,
-   "line": 25
+   "line": 25,
+   "author": "human"
   },
   {
    "src": "d3",
@@ -296,7 +315,8 @@
    },
    "crosses": [],
    "outside_canvas": false,
-   "line": 26
+   "line": 26,
+   "author": "human"
   },
   {
    "src": "p3",
@@ -309,7 +329,8 @@
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
-   "line": 27
+   "line": 27,
+   "author": "human"
   },
   {
    "src": "p4",
@@ -322,7 +343,8 @@
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
-   "line": 28
+   "line": 28,
+   "author": "human"
   },
   {
    "src": "p2",
@@ -335,7 +357,8 @@
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
-   "line": 29
+   "line": 29,
+   "author": "human"
   },
   {
    "src": "p1",
@@ -348,7 +371,8 @@
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
-   "line": 30
+   "line": 30,
+   "author": "human"
   },
   {
    "src": "p4",
@@ -361,7 +385,8 @@
    "label_pos": null,
    "crosses": [],
    "outside_canvas": false,
-   "line": 32
+   "line": 32,
+   "author": "human"
   }
  ]
 }
