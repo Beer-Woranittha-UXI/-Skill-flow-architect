@@ -138,6 +138,8 @@
   .e-hit { fill:none; stroke:transparent; stroke-width:28;
     pointer-events:stroke; cursor:move; }
   .e-h { fill:var(--paper); stroke:var(--ink); stroke-width:3; cursor:crosshair; }
+  .e-b { fill:var(--paper); stroke:var(--ink); stroke-width:2.5; cursor:move; }
+  .e-b[hidden] { display:none; }
   /* คำเตือนของตัวแก้ผัง ไม่ใช่สีความหมายในผัง — ไม่ติดไปกับ .svg/.png */
   .zoom button.warn { color:var(--no); border-color:var(--no); }
   .e-flag { stroke-width:16; }
@@ -479,6 +481,7 @@
     E[i] = {
       path: p, from: p.dataset.from, to: p.dataset.to,
       of: p.dataset.from, ot: p.dataset.to, op: p.dataset.op || '->',
+      shaped: false,                      // true เมื่อคนจัดรูปเส้นนี้ด้วยมือแล้ว
       pts: (p.dataset.pts || '').split(' ').filter(Boolean).map(function (s) {
         var a = s.split(','); return [+a[0], +a[1]];
       }),
@@ -736,6 +739,17 @@
   }
   var hA = mkCircle(), hB = mkCircle();
   hA.dataset.end = 'head'; hB.dataset.end = 'tail';
+  var bends = [];                         // จุดจับข้อศอก สร้างเท่าที่ต้องใช้
+  function mkBend() {
+    var r = document.createElementNS(NS, 'rect');
+    r.setAttribute('class', 'e-b');
+    r.setAttribute('width', '20'); r.setAttribute('height', '20');
+    r.setAttribute('rx', '4');
+    r.setAttribute('hidden', '');
+    svg.appendChild(r);
+    bends.push(r);
+    return r;
+  }
   var hovE = -1;
   function showHandles(i) {
     if (!E[i]) return;
@@ -744,10 +758,37 @@
     hA.setAttribute('cx', p[0][0]); hA.setAttribute('cy', p[0][1]);
     hB.setAttribute('cx', z[0]); hB.setAttribute('cy', z[1]);
     hA.removeAttribute('hidden'); hB.removeAttribute('hidden');
+    for (var n = 0; n < Math.max(bends.length, p.length - 2); n++) {
+      var el = bends[n] || mkBend();
+      if (n < p.length - 2) {
+        el.setAttribute('x', p[n + 1][0] - 10);
+        el.setAttribute('y', p[n + 1][1] - 10);
+        el.dataset.idx = String(n + 1);
+        el.removeAttribute('hidden');
+      } else el.setAttribute('hidden', '');
+    }
   }
   function hideHandles() {
     hovE = -1;
     hA.setAttribute('hidden', ''); hB.setAttribute('hidden', '');
+    bends.forEach(function (b) { b.setAttribute('hidden', ''); });
+  }
+  // แทรกข้อศอกใหม่ตรงจุดที่คลิก / ลบข้อศอกที่ไม่ต้องการ
+  function addBend(i, x, y) {
+    var e = E[i], seg = nearestSeg(e.pts, x, y);
+    e.pts = clonePts(e.pts);
+    e.pts.splice(seg + 1, 0, [x, y]);
+    e.pts = orthFix(e.pts);
+    e.shaped = true;
+  }
+  function delBend(i, idx) {
+    var e = E[i];
+    if (idx <= 0 || idx >= e.pts.length - 1) return false;
+    var p = clonePts(e.pts);
+    p.splice(idx, 1);
+    e.pts = tidy(orthFix(p));
+    e.shaped = true;
+    return true;
   }
 
   function paintChanges() {
@@ -845,6 +886,35 @@
     return [a, [a[0], my], [b[0], my], b];
   }
 
+  // ── เส้นที่คนจัดเองแล้ว: ยืดทั้งเส้นตามสัดส่วน ไม่เดินเส้นใหม่ทับของเขา ──
+  // สเกลทีละแกนโดยตรึงปลายที่ไม่ได้ขยับไว้ — เส้นแนวตั้ง/แนวนอนยังตั้งฉากเหมือนเดิม
+  function orthFix(ps) {
+    var p = [ps[0]];
+    for (var i = 1; i < ps.length; i++) {
+      var a = p[p.length - 1], b = ps[i];
+      if (Math.abs(a[0] - b[0]) > 0.5 && Math.abs(a[1] - b[1]) > 0.5) {
+        p.push([a[0], b[1]]);             // ช่วงที่กลายเป็นเฉียง แทรกข้อศอกคืน
+      }
+      p.push([b[0], b[1]]);
+    }
+    return p;
+  }
+  function stretch(base, head, dx, dy) {
+    var p = clonePts(base), n = p.length;
+    var mv = head ? 0 : n - 1, fx = head ? n - 1 : 0;
+    [0, 1].forEach(function (ax) {
+      var d = ax === 0 ? dx : dy;
+      var m0 = base[mv][ax], f0 = base[fx][ax];
+      if (Math.abs(m0 - f0) >= 1) {       // สเกลรอบปลายที่ตรึงไว้
+        var k = (m0 + d - f0) / (m0 - f0);
+        for (var i = 0; i < n; i++) p[i][ax] = f0 + (base[i][ax] - f0) * k;
+      } else {                            // ปลายสองข้างอยู่แนวเดียวกัน สเกลไม่ได้
+        for (var j = 0; j < n; j++) if (j !== fx) p[j][ax] = base[j][ax] + d;
+      }
+    });
+    return tidy(orthFix(p));
+  }
+
   function moveEnd(ps, head, dx, dy) {
     var p = expand(clonePts(ps)), n = p.length;
     if (head) {
@@ -890,7 +960,7 @@
   function snap() {
     return JSON.stringify({
       o: off,
-      e: E.map(function (e) { return e ? { p: e.pts, f: e.from, t: e.to } : null; })
+      e: E.map(function (e) { return e ? { p: e.pts, f: e.from, t: e.to, s: e.shaped } : null; })
     });
   }
   function restore(s) {
@@ -901,6 +971,7 @@
       E[i].pts = d.e[i].p;
       E[i].from = d.e[i].f;
       E[i].to = d.e[i].t;
+      E[i].shaped = !!d.e[i].s;
       E[i].path.dataset.from = E[i].from;
       E[i].path.dataset.to = E[i].to;
     }
@@ -949,6 +1020,32 @@
     var g = ev.target.closest ? ev.target.closest('g.node') : null;
     var cls = ev.target.classList;
     var hit = cls && cls.contains('e-hit') ? ev.target : null;
+    var bend = cls && cls.contains('e-b') ? ev.target : null;
+    if (bend && hovE >= 0) {
+      ev.preventDefault();
+      if (ev.altKey || ev.button === 2) {        // Alt/⌥ หรือคลิกขวา = ลบข้อศอก
+        begin();
+        if (delBend(hovE, +bend.dataset.idx)) { drawEdge(hovE); showHandles(hovE); }
+        else undo.pop();
+        paintCross(); paintBtns();
+        return;
+      }
+      begin();
+      drag = { kind: 'bend', i: hovE, idx: +bend.dataset.idx,
+               base: clonePts(E[hovE].pts) };
+      svg.setPointerCapture(ev.pointerId);
+      return;
+    }
+    if (hit && (ev.altKey || ev.button === 2)) {  // Alt/⌥ หรือคลิกขวาบนเส้น = แทรกข้อศอก
+      ev.preventDefault();
+      var q0 = svgPt(ev);
+      begin();
+      addBend(+hit.dataset.e, q0[0], q0[1]);
+      drawEdge(+hit.dataset.e);
+      showHandles(+hit.dataset.e);
+      paintCross(); paintBtns();
+      return;
+    }
     var handle = cls && cls.contains('e-h') ? ev.target : null;
     if (handle && hovE >= 0) {
       ev.preventDefault();
@@ -988,7 +1085,23 @@
     if (!drag) {                          // ไม่ได้ลากอยู่ — แค่โชว์จุดจับของเส้นที่ชี้อยู่
       var c = ev.target.classList;
       if (c && c.contains('e-hit')) showHandles(+ev.target.dataset.e);
-      else if (!c || !c.contains('e-h')) hideHandles();
+      else if (!c || (!c.contains('e-h') && !c.contains('e-b'))) hideHandles();
+      return;
+    }
+    if (drag.kind === 'bend') {
+      var q1 = svgPt(ev), e1 = E[drag.i], p1 = clonePts(drag.base), k1 = drag.idx;
+      var a1 = p1[k1 - 1], c1 = p1[k1 + 1];
+      var preH = Math.abs(a1[1] - p1[k1][1]) <= Math.abs(a1[0] - p1[k1][0]);
+      var nxtH = Math.abs(c1[1] - p1[k1][1]) <= Math.abs(c1[0] - p1[k1][0]);
+      p1[k1] = [q1[0], q1[1]];
+      if (preH) p1[k1 - 1] = [a1[0], q1[1]]; else p1[k1 - 1] = [q1[0], a1[1]];
+      if (nxtH) p1[k1 + 1] = [c1[0], q1[1]]; else p1[k1 + 1] = [q1[0], c1[1]];
+      if (k1 - 1 === 0) p1[0] = [drag.base[0][0], drag.base[0][1]];
+      if (k1 + 1 === p1.length - 1) p1[p1.length - 1] = clonePts(drag.base).pop();
+      e1.pts = orthFix(p1);
+      e1.shaped = true;
+      drawEdge(drag.i);
+      showHandles(drag.i);
       return;
     }
     if (drag.kind === 'end') {
@@ -1019,15 +1132,17 @@
     if (drag.kind === 'node') {
       off[drag.id] = [drag.o[0] + dx, drag.o[1] + dy];
       drag.edges.forEach(function (m) {
-        // เส้นเดินใหม่เองตามกล่องที่ย้าย ถ้าเดินใหม่ไม่ได้ (เส้นวนเข้าตัวเอง)
-        // ค่อยถอยไปใช้วิธียืดปลายเส้นแบบเดิม
-        if (!autoRoute(m.i)) E[m.i].pts = moveEnd(m.base, m.head, dx, dy);
+        // เส้นที่คนจัดเองแล้ว = ยืดตามสัดส่วน รักษารูปที่เขาวางไว้
+        // เส้นที่ยังไม่เคยแตะ = เดินใหม่เองให้สั้นที่สุด
+        if (E[m.i].shaped) E[m.i].pts = stretch(m.base, m.head, dx, dy);
+        else if (!autoRoute(m.i)) E[m.i].pts = moveEnd(m.base, m.head, dx, dy);
         drawEdge(m.i);
       });
       var g2 = nodeEls[drag.id];
       g2.setAttribute('transform', 'translate(' + off[drag.id][0] + ',' + off[drag.id][1] + ')');
     } else {
       E[drag.i].pts = shiftSeg(drag.base, drag.seg, dx, dy);
+      E[drag.i].shaped = true;
       drawEdge(drag.i);
     }
   });
@@ -1057,6 +1172,10 @@
     paintCross();
     paintBtns();
   }
+  svg.addEventListener('contextmenu', function (ev) {
+    var c = ev.target.classList;
+    if (c && (c.contains('e-hit') || c.contains('e-b'))) ev.preventDefault();
+  });
   svg.addEventListener('pointerup', endDrag);
   svg.addEventListener('pointercancel', endDrag);
 
@@ -1081,7 +1200,7 @@
     begin();
     var changed = false;
     list.forEach(function (n) {
-      if (autoRoute(n)) { drawEdge(n); changed = true; }
+      if (autoRoute(n)) { E[n].shaped = false; drawEdge(n); changed = true; }
     });
     if (!changed) undo.pop();
     if (onEdge && list.length === 1) showHandles(list[0]);
