@@ -159,6 +159,37 @@ def check_source(nodes, order, edges):
     return rows
 
 
+AI_LIMIT = 0.40
+
+
+def check_authorship(nodes, order, edges):
+    """A1 — สัดส่วนกล่องที่มาจากข้อเสนอของ AI
+
+    Step 4 ของ SKILL.md บอกให้หยุดเมื่อเกิน 40% เดิมต้องนับมือ ตรงนี้ให้เครื่องนับแทน
+    ไฟล์ที่ไม่มีคอมเมนต์ [AI-xx] เลย จะนับเป็นของดีไซเนอร์ทั้งใบ
+    """
+    rows = []
+    boxes = [n for n in order if nodes[n]["kind"] != "PERMNOTE"]
+    if not boxes:
+        return rows
+    ai = [n for n in boxes if nodes[n].get("author") == "ai"]
+    if not ai:
+        return rows
+    pct = len(ai) / len(boxes)
+    if pct > AI_LIMIT:
+        add(rows, "R1", "A1",
+            f"กล่องที่มาจากข้อเสนอของ AI {len(ai)}/{len(boxes)} = {pct:.0%} "
+            f"เกิน {AI_LIMIT:.0%} — ใบนี้กำลังกลายเป็น flow ของ AI "
+            "ควรถอยไปคุยโครงกับดีไซเนอร์ก่อน (SKILL.md Step 4)",
+            ", ".join(ai))
+    ai_e = [e for e in edges if e.get("author") == "ai"]
+    if ai_e:
+        add(rows, "R2", "A2",
+            f"เส้นที่มาจากข้อเสนอของ AI {len(ai_e)} เส้น — ตรวจว่าอนุมัติครบแล้ว",
+            ", ".join(f'{e["src"]}→{e["dst"]}' for e in ai_e))
+    return rows
+
+
 def check_geometry(meta):
     rows = []
     g, sp = meta["geometry"], meta["spacing"]
@@ -244,6 +275,7 @@ def main():
         sys.exit(2)
 
     rows = check_source(nodes, order, edges)
+    rows += check_authorship(nodes, order, edges)
     meta_path = a.meta
     if not meta_path:
         guess = os.path.splitext(a.src)[0] + ".meta.json"

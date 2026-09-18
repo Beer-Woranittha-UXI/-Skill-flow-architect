@@ -747,13 +747,14 @@ def render(src, out_path=None, title=None, tokens=None):
     }
 
     legend = LEGEND_HTML
+    ledger = build_ledger(flow_meta)
     head = title or flow_meta["flow"] or "User Flow"
     svg_nodes = "\n    ".join(node_svg(nodes[i]) for i in order)
     html = HTML_TMPL.format(
         title=esc(head), flow=esc(flow_meta["flow"]),
         goal=esc(meta["GOAL"]), owner=esc(meta["OWNER"]), date=esc(meta["DATE"]),
         note=esc(meta["NOTE"]),
-        W=round(W), H=round(H), legend=legend,
+        W=round(W), H=round(H), legend=legend, ledger=ledger,
         edges="\n    ".join(edge_svg), labels="\n    ".join(label_svg),
         nodes=svg_nodes, meta=json.dumps(flow_meta, ensure_ascii=False, indent=1),
         counts=f"{len([n for n in order if not n.endswith('__perm')])} กล่อง · "
@@ -766,6 +767,56 @@ def render(src, out_path=None, title=None, tokens=None):
     with open(os.path.splitext(out_path)[0] + ".meta.json", "w", encoding="utf-8") as fh:
         json.dump(flow_meta, fh, ensure_ascii=False, indent=1)
     return out_path, flow_meta
+
+
+LEDGER_LIMIT = 0.40
+
+
+def build_ledger(flow_meta):
+    """บล็อกบอกที่มาของกล่อง — ใครคิด ไม่ใช่กล่องนั้นคืออะไร
+
+    ไม่แตะ geometry และไม่เพิ่มสีลงผัง (style-guide §สีเน้นใช้ประหยัด)
+    """
+    boxes = [n for n in flow_meta["nodes"] if n["kind"] != "PERMNOTE"]
+    ai_boxes = [n for n in boxes if n.get("author") == "ai"]
+    ai_edges = [e for e in flow_meta["edges"] if e.get("author") == "ai"]
+    total = len(boxes) or 1
+    pct = len(ai_boxes) / total
+
+    if not ai_boxes and not ai_edges:
+        return ('\n      <div class="led">\n'
+                '        <div class="led-t">ที่มาของ flow</div>\n'
+                f'        <p class="led-all">ทุกกล่องทั้ง {total} กล่องมาจากดีไซเนอร์ '
+                'ยังไม่มีข้อเสนอของ AI ที่ถูกอนุมัติลงผัง</p>\n'
+                '      </div>')
+
+    rows = []
+    for n in ai_boxes:
+        rows.append(f'<tr><td class="led-k">กล่อง</td><td>{esc(n["label"])}</td>'
+                    f'<td class="led-id">{esc(n.get("ai_id", ""))}</td>'
+                    f'<td>{esc(n.get("note", ""))}</td></tr>')
+    for e in ai_edges:
+        rows.append(f'<tr><td class="led-k">เส้น</td>'
+                    f'<td>{esc(e["src"])} → {esc(e["dst"])}</td>'
+                    f'<td class="led-id">{esc(e.get("ai_id", ""))}</td>'
+                    f'<td>{esc(e.get("note", ""))}</td></tr>')
+
+    warn = ""
+    if pct > LEDGER_LIMIT:
+        warn = ('<p class="led-warn">⚠ กล่องที่มาจากข้อเสนอของ AI เกิน '
+                f'{LEDGER_LIMIT:.0%} ของทั้งใบ — ใบนี้กำลังกลายเป็น flow ของ AI '
+                'ควรถอยไปคุยโครงกับดีไซเนอร์ก่อน</p>')
+
+    return ('\n      <div class="led">\n'
+            '        <div class="led-t">ที่มาของ flow</div>\n'
+            f'        <p class="led-sum">ดีไซเนอร์เขียน <b>{total - len(ai_boxes)}</b> กล่อง '
+            f'· มาจากข้อเสนอของ AI ที่อนุมัติแล้ว <b>{len(ai_boxes)}</b> กล่อง '
+            f'(<b>{pct:.0%}</b> ของทั้งใบ) และ <b>{len(ai_edges)}</b> เส้น</p>\n'
+            f'        {warn}\n'
+            '        <table class="led-tb"><thead><tr><th>ชนิด</th><th>ที่ไหน</th>'
+            '<th>ข้อเสนอ</th><th>เหตุผล</th></tr></thead><tbody>\n          '
+            + "\n          ".join(rows)
+            + '\n        </tbody></table>\n      </div>')
 
 
 LEGEND_HTML = """
@@ -804,7 +855,8 @@ HTML_TMPL = """<!DOCTYPE html>
   h1 {{ font-size:20px; margin:0 0 4px; font-weight:700; }}
   .sub {{ font-size:13px; color:var(--muted); display:flex; gap:16px; flex-wrap:wrap; }}
   .sub b {{ font-weight:600; color:var(--ink); }}
-  main {{ display:flex; gap:24px; align-items:flex-start; padding:24px 28px 80px; }}
+  main {{ display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;
+    padding:24px 28px 80px; }}
   .lg {{ position:sticky; top:104px; flex:0 0 300px; background:var(--paper);
     border:1px solid var(--hairline); border-radius:16px; padding:20px 24px; }}
   .lg-t {{ font-weight:700; font-size:15px; margin-bottom:14px;
@@ -812,6 +864,23 @@ HTML_TMPL = """<!DOCTYPE html>
   .lg-i {{ display:flex; gap:12px; align-items:center; margin:12px 0; font-size:12px;
     color:var(--muted); line-height:1.4; }}
   .lg-i svg {{ flex:0 0 54px; }}
+  .led {{ flex:1 0 100%; background:var(--paper); border:1px solid var(--hairline);
+    border-radius:16px; padding:16px 24px; }}
+  .led-t {{ font-weight:700; font-size:15px; margin-bottom:12px;
+    border-bottom:2px solid var(--ink); display:inline-block; padding-bottom:2px; }}
+  .led-sum, .led-all {{ font-size:13px; color:var(--muted); margin:0 0 12px; }}
+  .led-sum b {{ color:var(--ink); }}
+  .led-all {{ margin-bottom:0; }}
+  .led-warn {{ font-size:13px; color:var(--no); font-weight:700; margin:0 0 12px; }}
+  .led-tb {{ border-collapse:collapse; width:100%; font-size:13px; }}
+  .led-tb th {{ text-align:left; font-size:11px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--muted); font-weight:700;
+    padding:0 12px 6px 0; border-bottom:1px solid var(--hairline); }}
+  .led-tb td {{ padding:8px 12px 8px 0; border-bottom:1px solid var(--hairline);
+    vertical-align:top; line-height:1.5; }}
+  .led-tb tr:last-child td {{ border-bottom:0; }}
+  .led-k {{ color:var(--muted); white-space:nowrap; }}
+  .led-id {{ font-weight:700; white-space:nowrap; }}
   .canvas {{ flex:1 1 auto; min-width:0; overflow:auto; background:var(--paper);
     border:1px solid var(--hairline); border-radius:16px; padding:8px; }}
   .zoomwrap {{ transform-origin:0 0; width:{W}px; }}
@@ -880,6 +949,7 @@ HTML_TMPL = """<!DOCTYPE html>
     </svg>
     </div>
   </div>
+  {ledger}
 </main>
 <script>
   (function () {{

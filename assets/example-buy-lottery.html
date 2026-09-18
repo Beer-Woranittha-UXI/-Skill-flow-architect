@@ -21,7 +21,8 @@
   h1 { font-size:20px; margin:0 0 4px; font-weight:700; }
   .sub { font-size:13px; color:var(--muted); display:flex; gap:16px; flex-wrap:wrap; }
   .sub b { font-weight:600; color:var(--ink); }
-  main { display:flex; gap:24px; align-items:flex-start; padding:24px 28px 80px; }
+  main { display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;
+    padding:24px 28px 80px; }
   .lg { position:sticky; top:104px; flex:0 0 300px; background:var(--paper);
     border:1px solid var(--hairline); border-radius:16px; padding:20px 24px; }
   .lg-t { font-weight:700; font-size:15px; margin-bottom:14px;
@@ -29,6 +30,23 @@
   .lg-i { display:flex; gap:12px; align-items:center; margin:12px 0; font-size:12px;
     color:var(--muted); line-height:1.4; }
   .lg-i svg { flex:0 0 54px; }
+  .led { flex:1 0 100%; background:var(--paper); border:1px solid var(--hairline);
+    border-radius:16px; padding:16px 24px; }
+  .led-t { font-weight:700; font-size:15px; margin-bottom:12px;
+    border-bottom:2px solid var(--ink); display:inline-block; padding-bottom:2px; }
+  .led-sum, .led-all { font-size:13px; color:var(--muted); margin:0 0 12px; }
+  .led-sum b { color:var(--ink); }
+  .led-all { margin-bottom:0; }
+  .led-warn { font-size:13px; color:var(--no); font-weight:700; margin:0 0 12px; }
+  .led-tb { border-collapse:collapse; width:100%; font-size:13px; }
+  .led-tb th { text-align:left; font-size:11px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--muted); font-weight:700;
+    padding:0 12px 6px 0; border-bottom:1px solid var(--hairline); }
+  .led-tb td { padding:8px 12px 8px 0; border-bottom:1px solid var(--hairline);
+    vertical-align:top; line-height:1.5; }
+  .led-tb tr:last-child td { border-bottom:0; }
+  .led-k { color:var(--muted); white-space:nowrap; }
+  .led-id { font-weight:700; white-space:nowrap; }
   .canvas { flex:1 1 auto; min-width:0; overflow:auto; background:var(--paper);
     border:1px solid var(--hairline); border-radius:16px; padding:8px; }
   .zoomwrap { transform-origin:0 0; width:6722px; }
@@ -157,6 +175,11 @@
     </svg>
     </div>
   </div>
+  
+      <div class="led">
+        <div class="led-t">ที่มาของ flow</div>
+        <p class="led-all">ทุกกล่องทั้ง 10 กล่องมาจากดีไซเนอร์ ยังไม่มีข้อเสนอของ AI ที่ถูกอนุมัติลงผัง</p>
+      </div>
 </main>
 <script>
   (function () {
