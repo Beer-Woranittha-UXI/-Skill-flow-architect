@@ -211,6 +211,7 @@ def parse(path):
     meta = {"FLOW": "", "GOAL": "", "OWNER": "", "DATE": "", "NOTE": ""}
     spacing = {"edge": 500.0, "label": 100.0}
     nodes, edges, perms, order = {}, [], [], []
+    closed = []
 
     with open(path, encoding="utf-8") as fh:
         raw = fh.readlines()
@@ -236,6 +237,10 @@ def parse(path):
                 k, _, v = tok.partition("=")
                 if k in spacing and v:
                     spacing[k] = float(v)
+            continue
+        if key == "CLOSED":
+            nid, _, why = rest.partition(" ")
+            closed.append((nid, why.strip() or "ปิดแล้ว", ln))
             continue
         if key == "PERM":
             nid, _, text = rest.partition(" ")
@@ -289,6 +294,11 @@ def parse(path):
         edges.append({"src": nid, "dst": note, "type": EDGE_PERM, "label": "",
                       "line": ln, **who})
         nodes[nid]["has_perm"] = True
+
+    for nid, why, ln in closed:
+        if nid not in nodes:
+            raise FlowError(f"บรรทัด {ln}: CLOSED ชี้ไป node '{nid}' ที่ไม่มีอยู่")
+        nodes[nid]["closed"] = why
 
     for e in edges:
         for side in ("src", "dst"):
@@ -750,7 +760,7 @@ def render(src, out_path=None, title=None, tokens=None):
 
     legend = LEGEND_HTML
     ledger = build_ledger(flow_meta)
-    report = build_report(run_checks(nodes, order, edges, flow_meta), nodes)
+    report = build_report(run_checks(meta, nodes, order, edges, flow_meta), nodes)
     head = title or flow_meta["flow"] or "User Flow"
     svg_nodes = "\n    ".join(node_svg(nodes[i]) for i in order)
     out_path = out_path or os.path.splitext(src)[0] + ".html"
@@ -878,7 +888,7 @@ def write_png(square_svg, png_path, W, H, side, px):
 SEV_LABEL = {"R0": "ต้องแก้ก่อนส่ง", "R1": "ควรแก้", "R2": "ข้อสังเกต"}
 
 
-def run_checks(nodes, order, edges, flow_meta):
+def run_checks(hdr, nodes, order, edges, flow_meta):
     """เรียก self_check.py ตัวจริงมาใช้ — กฎมีที่เดียว ไม่เขียนซ้ำในนี้
 
     import ข้างในฟังก์ชันเพราะ self_check import จากไฟล์นี้ (กัน circular import)
@@ -887,7 +897,9 @@ def run_checks(nodes, order, edges, flow_meta):
         import self_check as sc
     except ImportError:
         return None
-    rows = sc.check_source(nodes, order, edges)
+    rows = sc.check_draft_gate(hdr, nodes, order)
+    rows += sc.check_source(nodes, order, edges)
+    rows += sc.check_rounds(nodes, order)
     rows += sc.check_authorship(nodes, order, edges)
     rows += sc.check_coverage(nodes, order, edges)
     rows += sc.check_geometry(flow_meta)
@@ -908,7 +920,7 @@ def build_report(rows, nodes):
         body = '<p class="rp-ok">ผ่านทุกข้อ — ไม่มีอะไรค้าง</p>'
     else:
         items = []
-        for r in rows:
+        for i, r in enumerate(rows, 1):
             targets = [w.strip() for w in str(r["where"]).split(",") if w.strip()]
             chips = "".join(
                 f'<button class="rp-go" data-go="n-{esc(t)}" type="button">'
@@ -920,13 +932,26 @@ def build_report(rows, nodes):
                 where = f'<div class="rp-where rp-plain">{esc(str(r["where"]))}</div>'
             else:
                 where = ""
+            rid = f'{r["code"]}-{i}'
             items.append(
-                f'<li class="rp-item rp-i{r["sev"].lower()}">'
+                f'<li class="rp-item rp-i{r["sev"].lower()}" id="i-{rid}"'
+                f' data-id="{rid}" data-code="{esc(r["code"])}"'
+                f' data-msg="{esc(r["msg"])}">'
                 f'<div class="rp-head"><span class="rp-sev">{r["sev"]}</span>'
                 f'<span class="rp-code">{esc(r["code"])}</span>'
                 f'<span class="rp-sevname">{SEV_LABEL[r["sev"]]}</span></div>'
-                f'<div class="rp-msg">{esc(r["msg"])}</div>{where}</li>')
-        body = '<ul class="rp-list">' + "".join(items) + "</ul>"
+                f'<div class="rp-msg">{esc(r["msg"])}</div>{where}'
+                f'<div class="rp-dec">'
+                f'<button class="rp-yes" data-id="{rid}" data-v="yes" type="button"'
+                f' aria-pressed="false">รับ</button>'
+                f'<button class="rp-no" data-id="{rid}" data-v="no" type="button"'
+                f' aria-pressed="false">ไม่รับ</button></div></li>')
+        body = ('<div class="rp-bar"><span id="rp-count"></span>'
+                '<button id="rp-copy" type="button">คัดลอกผลกลับไปวางในแชท</button>'
+                '<button id="rp-reset" type="button">ล้างคำตัดสิน</button></div>'
+                '<ul class="rp-list">' + "".join(items) + "</ul>"
+                '<textarea id="rp-out" rows="4" readonly'
+                ' placeholder="กดคัดลอกแล้วข้อความจะมาอยู่ตรงนี้"></textarea>')
 
     return ('\n      <div class="rp">\n'
             '        <div class="rp-t">ผลตรวจกฎ</div>\n'
@@ -1062,6 +1087,27 @@ HTML_TMPL = """<!DOCTYPE html>
   .rp-go:hover {{ border-color:var(--primary); }}
   .rp-go:focus-visible {{ outline:2px solid var(--primary); outline-offset:2px; }}
   .rp-foot {{ font-size:12px; color:var(--muted); margin:14px 0 0; }}
+  .rp-bar {{ display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    margin-bottom:12px; font-size:13px; }}
+  .rp-bar button {{ font:inherit; font-size:12px; font-weight:600; cursor:pointer;
+    background:var(--paper_2); border:1px solid var(--hairline); color:var(--ink);
+    border-radius:8px; padding:5px 12px; }}
+  .rp-bar button:hover {{ border-color:var(--primary); color:var(--primary); }}
+  #rp-count {{ font-weight:700; margin-right:auto; }}
+  .rp-dec {{ display:flex; gap:8px; margin-top:9px; }}
+  .rp-dec button {{ font:inherit; font-size:12px; font-weight:700; cursor:pointer;
+    background:var(--paper); border:1px solid var(--hairline); color:var(--muted);
+    border-radius:8px; padding:4px 14px; }}
+  .rp-dec button[aria-pressed="true"].rp-yes {{ background:var(--yes); color:#fff;
+    border-color:var(--yes); }}
+  .rp-dec button[aria-pressed="true"].rp-no {{ background:var(--no); color:#fff;
+    border-color:var(--no); }}
+  .rp-dec button:focus-visible {{ outline:2px solid var(--primary);
+    outline-offset:2px; }}
+  .rp-item.taken {{ opacity:.55; }}
+  #rp-out {{ width:100%; margin-top:12px; font:inherit; font-size:12px;
+    border:1px solid var(--hairline); border-radius:8px; padding:8px;
+    background:var(--paper_2); color:var(--ink); resize:vertical; }}
   .node.hit rect, .node.hit path {{ stroke:var(--ink); stroke-width:6; }}
   @media (prefers-reduced-motion:no-preference) {{
     .node.hit rect, .node.hit path {{ animation:hit 1.1s ease-out; }}
@@ -1175,6 +1221,61 @@ HTML_TMPL = """<!DOCTYPE html>
       }});
     }});
     addEventListener('resize', function () {{ if (mode === 'fit') apply(); }});
+
+    // รับ/ไม่รับรายข้อ — จำไว้ในเครื่องผู้ใช้ แล้วคัดลอกกลับไปวางในแชทได้
+    (function () {{
+      var items = [].slice.call(document.querySelectorAll('.rp-item'));
+      if (!items.length) return;
+      var KEY = 'flowreview:' + document.title;
+      var state = {{}};
+      try {{ state = JSON.parse(localStorage.getItem(KEY) || '{{}}'); }}
+      catch (e) {{ state = {{}}; }}
+
+      function paint() {{
+        var y = 0, n = 0, p = 0;
+        items.forEach(function (li) {{
+          var v = state[li.dataset.id] || 'pending';
+          li.classList.toggle('taken', v !== 'pending');
+          li.querySelectorAll('.rp-dec button').forEach(function (b) {{
+            b.setAttribute('aria-pressed', String(b.dataset.v === v));
+          }});
+          if (v === 'yes') y++; else if (v === 'no') n++; else p++;
+        }});
+        document.getElementById('rp-count').textContent =
+          'รับ ' + y + ' · ไม่รับ ' + n + ' · ยังไม่ตัดสิน ' + p +
+          ' จาก ' + items.length + ' ข้อ';
+        try {{ localStorage.setItem(KEY, JSON.stringify(state)); }} catch (e) {{}}
+      }}
+
+      document.querySelectorAll('.rp-dec button').forEach(function (b) {{
+        b.addEventListener('click', function () {{
+          var id = b.dataset.id;
+          state[id] = state[id] === b.dataset.v ? 'pending' : b.dataset.v;
+          paint();
+        }});
+      }});
+
+      document.getElementById('rp-copy').addEventListener('click', function () {{
+        var out = ['ผลรีวิว: ' + document.title];
+        items.forEach(function (li) {{
+          var v = state[li.dataset.id] || 'pending';
+          out.push('- ' + li.dataset.code + ' ' +
+            (v === 'yes' ? 'รับ' : v === 'no' ? 'ไม่รับ' : 'ยังไม่ตัดสิน') +
+            ' — ' + li.dataset.msg);
+        }});
+        var t = out.join('\n');
+        document.getElementById('rp-out').value = t;
+        if (navigator.clipboard) navigator.clipboard.writeText(t);
+      }});
+
+      document.getElementById('rp-reset').addEventListener('click', function () {{
+        state = {{}};
+        document.getElementById('rp-out').value = '';
+        paint();
+      }});
+
+      paint();
+    }})();
 
     // คลิกชื่อกล่องในผลตรวจ แล้วเลื่อนผังไปหากล่องนั้น + กะพริบให้เห็น
     document.querySelectorAll('.rp-go').forEach(function (b) {{

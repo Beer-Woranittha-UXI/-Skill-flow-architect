@@ -21,6 +21,7 @@ exit 1 เมื่อเจอ R0 — ใช้เป็น gate ก่อน h
 """
 
 import argparse
+import datetime
 import json
 import os
 import re
@@ -156,6 +157,84 @@ def check_source(nodes, order, edges):
     for nid in order:
         if nid not in reach:
             add(rows, "R1", "S10b", "เดินจาก START มาไม่ถึงกล่องนี้", nid)
+    return rows
+
+
+def write_log(path, src, meta, nodes, order, edges, rows, counts):
+    """ต่อท้าย log ว่ารอบนี้ตรวจอะไร เจออะไร — ไฟล์เดียวต่อหนึ่ง flow
+
+    log อยู่ในไฟล์ จึงข้ามเครื่อง ข้ามแชท ข้ามคนได้
+    ตอบคำถามว่า "รอบก่อนเจออะไร ปิดไปกี่จุดแล้ว" โดยไม่ต้องพึ่งความจำของ AI
+    """
+    decs = [n for n in order if nodes[n]["kind"] == "DEC"]
+    closed = [n for n in decs if nodes[n].get("closed")]
+    pages = [n for n in order if nodes[n]["kind"] == "PAGE"]
+    perm = [n for n in pages if nodes[n].get("has_perm")]
+    ai = [n for n in order if nodes[n].get("author") == "ai"
+          and nodes[n]["kind"] != "PERMNOTE"]
+    boxes = [n for n in order if nodes[n]["kind"] != "PERMNOTE"]
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    new = not os.path.exists(path)
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "a", encoding="utf-8") as fh:
+        if new:
+            fh.write(f'# Log — {meta.get("FLOW") or os.path.basename(src)}\n\n'
+                     "ต่อท้ายทุกครั้งที่รัน `self_check.py --log` "
+                     "— ไม่เขียนทับของเก่า\n\n"
+                     "| เวลา | กล่อง/เส้น | R0 | R1 | R2 | decision ที่ปิดแล้ว | "
+                     "หน้าที่มีเคสพิเศษ | กล่องจาก AI | รหัสที่เจอ |\n"
+                     "|---|---|---|---|---|---|---|---|---|\n")
+        codes = " ".join(sorted({r["code"] for r in rows})) or "—"
+        fh.write(f'| {stamp} | {len(boxes)}/{len(edges)} | {counts["R0"]} | '
+                 f'{counts["R1"]} | {counts["R2"]} | '
+                 f'{len(closed)}/{len(decs)} | {len(perm)}/{len(pages)} | '
+                 f'{len(ai)}/{len(boxes)} | {codes} |\n')
+    return path
+
+
+def check_draft_gate(meta, nodes, order):
+    """D1 — เกณฑ์ขั้นต่ำของ "ร่าง" 4 ข้อ (ยกมาจาก flow-architect 0.2.0 Step 1.1)
+
+    ตั้งใจให้เบา — ต่ำกว่านี้คือยังไม่ได้คิด สูงกว่านี้คนจะเลี่ยงไม่ร่าง
+    ใช้ตอบคำถามว่า "ร่างนี้เริ่มตรวจได้หรือยัง" ไม่ใช่ "ร่างนี้ดีหรือยัง"
+    """
+    rows = []
+    miss = []
+    if not any(nodes[n]["kind"] == "START" for n in order):
+        miss.append("จุดเริ่ม 1 จุด")
+    if not any(nodes[n]["kind"] == "END" for n in order):
+        miss.append("จุดจบอย่างน้อย 1 จุด")
+    steps = [n for n in order if nodes[n]["kind"] in ("PAGE", "LINK")]
+    if len(steps) < 3:
+        miss.append(f"step ระหว่างทาง ≥ 3 (ตอนนี้ {len(steps)})")
+    if not any(nodes[n]["kind"] == "DEC" for n in order):
+        miss.append("decision point ≥ 1")
+    if not (meta.get("GOAL") or "").strip():
+        miss.append("GOAL — 1 ประโยคว่า flow นี้ให้ผู้ใช้ทำอะไรสำเร็จ")
+    if miss:
+        add(rows, "R1", "D1",
+            "ร่างยังไม่ถึงเกณฑ์ขั้นต่ำที่จะเริ่มตรวจ ขาด: " + " · ".join(miss) +
+            " — ให้ดีไซเนอร์เติมเอง ห้ามเติมให้")
+    return rows
+
+
+def check_rounds(nodes, order):
+    """V1 — วนรีวิวจนครบทุก decision point
+
+    ทุก DEC ต้องถูกปิดด้วย CLOSED <id> <เหตุผล> ในไฟล์ .flow
+    state อยู่ในไฟล์ จึงข้ามเครื่อง ข้ามแชท ข้ามคนได้ — ไม่ต้องพึ่งความจำของ AI
+    """
+    rows = []
+    decs = [n for n in order if nodes[n]["kind"] == "DEC"]
+    if not decs:
+        return rows
+    closed = [n for n in decs if nodes[n].get("closed")]
+    open_decs = [n for n in decs if not nodes[n].get("closed")]
+    if open_decs and closed:
+        add(rows, "R2", "V1",
+            f"รีวิวยังไม่ครบ — ปิดแล้ว {len(decs) - len(open_decs)}/{len(decs)} "
+            "จุดตัดสินใจ ที่เหลือยังไม่มี CLOSED กำกับ",
+            ", ".join(open_decs))
     return rows
 
 
@@ -297,15 +376,20 @@ def main():
     ap.add_argument("src")
     ap.add_argument("--meta", help="ไฟล์ .meta.json ที่ render_flow.py สร้าง")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--log", nargs="?", const="", metavar="PATH",
+                    help="ต่อท้าย log ของรอบนี้ "
+                         "(ไม่ใส่ path = docs/flow/log/<ชื่อไฟล์>.md)")
     a = ap.parse_args()
 
     try:
-        _, _, nodes, order, edges = parse(a.src)
+        meta, _, nodes, order, edges = parse(a.src)
     except FlowError as e:
         print(f"⛔ อ่านไฟล์ไม่ผ่าน: {e}", file=sys.stderr)
         sys.exit(2)
 
-    rows = check_source(nodes, order, edges)
+    rows = check_draft_gate(meta, nodes, order)
+    rows += check_source(nodes, order, edges)
+    rows += check_rounds(nodes, order)
     rows += check_authorship(nodes, order, edges)
     rows += check_coverage(nodes, order, edges)
     meta_path = a.meta
@@ -316,10 +400,19 @@ def main():
         rows += check_geometry(json.load(open(meta_path, encoding="utf-8")))
 
     rows.sort(key=lambda r: (SEV_ORDER[r["sev"]], r["code"]))
+    counts = {s: sum(1 for r in rows if r["sev"] == s) for s in ("R0", "R1", "R2")}
+    if a.log is not None:
+        stem = os.path.splitext(os.path.basename(a.src))[0]
+        log_path = a.log or os.path.join("docs", "flow", "log", stem + ".md")
+        try:
+            write_log(log_path, a.src, meta, nodes, order, edges, rows, counts)
+            if not a.json:
+                print(f"📝 บันทึก log ต่อท้ายที่ {log_path}")
+        except OSError as e:
+            print(f"⚠️  เขียน log ไม่ได้: {e}", file=sys.stderr)
     if a.json:
         print(json.dumps(rows, ensure_ascii=False, indent=1))
     else:
-        counts = {s: sum(1 for r in rows if r["sev"] == s) for s in ("R0", "R1", "R2")}
         real = [n for n in order if nodes[n]["kind"] != "PERMNOTE"]
         pages = [n for n in order if nodes[n]["kind"] == "PAGE"]
         covered = [n for n in pages if nodes[n].get("has_perm")]

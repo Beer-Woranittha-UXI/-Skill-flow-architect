@@ -60,6 +60,27 @@
   .rp-go:hover { border-color:var(--primary); }
   .rp-go:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
   .rp-foot { font-size:12px; color:var(--muted); margin:14px 0 0; }
+  .rp-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    margin-bottom:12px; font-size:13px; }
+  .rp-bar button { font:inherit; font-size:12px; font-weight:600; cursor:pointer;
+    background:var(--paper_2); border:1px solid var(--hairline); color:var(--ink);
+    border-radius:8px; padding:5px 12px; }
+  .rp-bar button:hover { border-color:var(--primary); color:var(--primary); }
+  #rp-count { font-weight:700; margin-right:auto; }
+  .rp-dec { display:flex; gap:8px; margin-top:9px; }
+  .rp-dec button { font:inherit; font-size:12px; font-weight:700; cursor:pointer;
+    background:var(--paper); border:1px solid var(--hairline); color:var(--muted);
+    border-radius:8px; padding:4px 14px; }
+  .rp-dec button[aria-pressed="true"].rp-yes { background:var(--yes); color:#fff;
+    border-color:var(--yes); }
+  .rp-dec button[aria-pressed="true"].rp-no { background:var(--no); color:#fff;
+    border-color:var(--no); }
+  .rp-dec button:focus-visible { outline:2px solid var(--primary);
+    outline-offset:2px; }
+  .rp-item.taken { opacity:.55; }
+  #rp-out { width:100%; margin-top:12px; font:inherit; font-size:12px;
+    border:1px solid var(--hairline); border-radius:8px; padding:8px;
+    background:var(--paper_2); color:var(--ink); resize:vertical; }
   .node.hit rect, .node.hit path { stroke:var(--ink); stroke-width:6; }
   @media (prefers-reduced-motion:no-preference) {
     .node.hit rect, .node.hit path { animation:hit 1.1s ease-out; }
@@ -237,7 +258,7 @@
       <div class="rp">
         <div class="rp-t">ผลตรวจกฎ</div>
         <div class="rp-pills"><span class="rp-pill rp-pr0">R0 0</span><span class="rp-pill rp-pr1">R1 0</span><span class="rp-pill rp-pr2">R2 1</span></div>
-        <ul class="rp-list"><li class="rp-item rp-ir2"><div class="rp-head"><span class="rp-sev">R2</span><span class="rp-code">E2</span><span class="rp-sevname">ข้อสังเกต</span></div><div class="rp-msg">หน้าทางพลาด 3 หน้ายังไม่มีเคสพิเศษ — หน้าที่ผู้ใช้ถูกส่งมาเพราะเงื่อนไขไม่ผ่าน มักมีทั้งกรณีทำไม่สำเร็จซ้ำ และกรณีข้อมูลว่าง</div><div class="rp-where"><button class="rp-go" data-go="n-p1" type="button">หน้าเข้าสู่ระบบ</button><button class="rp-go" data-go="n-p2" type="button">หน้ายืนยันตัวตน</button><button class="rp-go" data-go="n-p3" type="button">หน้าเติมเงิน</button></div></li></ul>
+        <div class="rp-bar"><span id="rp-count"></span><button id="rp-copy" type="button">คัดลอกผลกลับไปวางในแชท</button><button id="rp-reset" type="button">ล้างคำตัดสิน</button></div><ul class="rp-list"><li class="rp-item rp-ir2" id="i-E2-1" data-id="E2-1" data-code="E2" data-msg="หน้าทางพลาด 3 หน้ายังไม่มีเคสพิเศษ — หน้าที่ผู้ใช้ถูกส่งมาเพราะเงื่อนไขไม่ผ่าน มักมีทั้งกรณีทำไม่สำเร็จซ้ำ และกรณีข้อมูลว่าง"><div class="rp-head"><span class="rp-sev">R2</span><span class="rp-code">E2</span><span class="rp-sevname">ข้อสังเกต</span></div><div class="rp-msg">หน้าทางพลาด 3 หน้ายังไม่มีเคสพิเศษ — หน้าที่ผู้ใช้ถูกส่งมาเพราะเงื่อนไขไม่ผ่าน มักมีทั้งกรณีทำไม่สำเร็จซ้ำ และกรณีข้อมูลว่าง</div><div class="rp-where"><button class="rp-go" data-go="n-p1" type="button">หน้าเข้าสู่ระบบ</button><button class="rp-go" data-go="n-p2" type="button">หน้ายืนยันตัวตน</button><button class="rp-go" data-go="n-p3" type="button">หน้าเติมเงิน</button></div><div class="rp-dec"><button class="rp-yes" data-id="E2-1" data-v="yes" type="button" aria-pressed="false">รับ</button><button class="rp-no" data-id="E2-1" data-v="no" type="button" aria-pressed="false">ไม่รับ</button></div></li></ul><textarea id="rp-out" rows="4" readonly placeholder="กดคัดลอกแล้วข้อความจะมาอยู่ตรงนี้"></textarea>
         <p class="rp-foot">รหัสกฎอ้างอิงจาก <code>flow-rules.md</code> — R0 ต้องแก้ก่อนส่ง · R1 ควรแก้ · R2 ดีไซเนอร์ตัดสินใจ</p>
       </div>
   
@@ -265,6 +286,62 @@
       });
     });
     addEventListener('resize', function () { if (mode === 'fit') apply(); });
+
+    // รับ/ไม่รับรายข้อ — จำไว้ในเครื่องผู้ใช้ แล้วคัดลอกกลับไปวางในแชทได้
+    (function () {
+      var items = [].slice.call(document.querySelectorAll('.rp-item'));
+      if (!items.length) return;
+      var KEY = 'flowreview:' + document.title;
+      var state = {};
+      try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); }
+      catch (e) { state = {}; }
+
+      function paint() {
+        var y = 0, n = 0, p = 0;
+        items.forEach(function (li) {
+          var v = state[li.dataset.id] || 'pending';
+          li.classList.toggle('taken', v !== 'pending');
+          li.querySelectorAll('.rp-dec button').forEach(function (b) {
+            b.setAttribute('aria-pressed', String(b.dataset.v === v));
+          });
+          if (v === 'yes') y++; else if (v === 'no') n++; else p++;
+        });
+        document.getElementById('rp-count').textContent =
+          'รับ ' + y + ' · ไม่รับ ' + n + ' · ยังไม่ตัดสิน ' + p +
+          ' จาก ' + items.length + ' ข้อ';
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+      }
+
+      document.querySelectorAll('.rp-dec button').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var id = b.dataset.id;
+          state[id] = state[id] === b.dataset.v ? 'pending' : b.dataset.v;
+          paint();
+        });
+      });
+
+      document.getElementById('rp-copy').addEventListener('click', function () {
+        var out = ['ผลรีวิว: ' + document.title];
+        items.forEach(function (li) {
+          var v = state[li.dataset.id] || 'pending';
+          out.push('- ' + li.dataset.code + ' ' +
+            (v === 'yes' ? 'รับ' : v === 'no' ? 'ไม่รับ' : 'ยังไม่ตัดสิน') +
+            ' — ' + li.dataset.msg);
+        });
+        var t = out.join('
+');
+        document.getElementById('rp-out').value = t;
+        if (navigator.clipboard) navigator.clipboard.writeText(t);
+      });
+
+      document.getElementById('rp-reset').addEventListener('click', function () {
+        state = {};
+        document.getElementById('rp-out').value = '';
+        paint();
+      });
+
+      paint();
+    })();
 
     // คลิกชื่อกล่องในผลตรวจ แล้วเลื่อนผังไปหากล่องนั้น + กะพริบให้เห็น
     document.querySelectorAll('.rp-go').forEach(function (b) {
