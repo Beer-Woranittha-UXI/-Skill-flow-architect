@@ -823,6 +823,12 @@ def render(src, out_path=None, title=None, tokens=None):
         W=round(W), H=round(H), legend=legend, ledger=ledger, report=report,
         edges="\n    ".join(edge_svg), labels="\n    ".join(label_svg),
         nodes=svg_nodes, editor_js=EDITOR_JS,
+        # ต้นฉบับ .flow ฝังไว้ให้หน้าเว็บสร้างไฟล์ที่แก้แล้วให้ดาวน์โหลดได้
+        # "</" ถูก escape กัน string ไปปิดแท็ก <script> เอง
+        src_json=json.dumps(
+            open(src, encoding="utf-8").read(), ensure_ascii=False
+        ).replace("</", "<\\/"),
+        src_name=esc(os.path.basename(src)),
         meta=json.dumps(flow_meta, ensure_ascii=False, indent=1),
         counts=f"{len([n for n in order if not n.endswith('__perm')])} กล่อง · "
                f"{len([e for e in edges if e['type'] != EDGE_PERM])} เส้น",
@@ -1145,6 +1151,26 @@ EDITOR_JS = r"""
 
   function clonePts(ps) { return ps.map(function (q) { return [q[0], q[1]]; }); }
 
+  // เก็บกวาดจุดก่อนวาดเสมอ — จุดซ้ำ จุดที่อยู่แนวเดียวกัน และการ "ย้อนกลับ"
+  // บนแกนเดิม ถ้าปล่อยไว้ ตัวลบมุมจะวาดส่วนโค้ง 180° กลายเป็นวงกลมโป่งกลางเส้น
+  function tidy(ps) {
+    var p = clonePts(ps), moved = true;
+    while (moved && p.length > 2) {
+      moved = false;
+      for (var i = 1; i < p.length - 1; i++) {
+        var a = p[i - 1], b = p[i], c = p[i + 1];
+        var same = Math.abs(a[0] - b[0]) < 0.5 && Math.abs(a[1] - b[1]) < 0.5;
+        var cross = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+        if (same || Math.abs(cross) < 0.5) {   // ซ้ำ · ตรงต่อกัน · หรือย้อนกลับ
+          p.splice(i, 1);
+          moved = true;
+          break;
+        }
+      }
+    }
+    return p;
+  }
+
   // ── กล่อง: กรอบปัจจุบัน · จุดเกาะ 4 ด้าน · หากล่องใต้เมาส์ ────────────
   function rectOf(id) {
     var g = nodeEls[id], o = off[id] || [0, 0];
@@ -1246,6 +1272,7 @@ EDITOR_JS = r"""
   function drawEdge(i) {
     var e = E[i];
     if (!e) return;
+    e.pts = tidy(e.pts);
     var d = roundedPath(e.pts, ELBOW);
     e.path.setAttribute('d', d);
     e.hit.setAttribute('d', d);
@@ -1583,6 +1610,94 @@ EDITOR_JS = r"""
     }
   });
 
+  // ── บันทึกสิ่งที่แก้ไว้ในเครื่อง · โหลดคืนเองตอนเปิดไฟล์ใหม่ ──────────
+  var srcEl = document.getElementById('flow-src');
+  var SRC = '', SRCNAME = 'flow.flow';
+  try {
+    if (srcEl) {
+      SRC = JSON.parse(srcEl.textContent);
+      SRCNAME = srcEl.dataset.name || SRCNAME;
+    }
+  } catch (e) {}
+  var SKEY = 'flowedit:' + SRCNAME + ':' + document.title;
+  var bSave = document.getElementById('ed-save'),
+      bDrop = document.getElementById('ed-drop'),
+      sInfo = document.getElementById('ed-saved');
+
+  function stamp(t) {
+    if (!sInfo) return;
+    sInfo.hidden = !t;
+    sInfo.textContent = t ? 'บันทึกไว้เมื่อ ' + t : '';
+    if (bDrop) bDrop.hidden = !t;
+  }
+  function save() {
+    var when = new Date().toLocaleString('th-TH');
+    try {
+      localStorage.setItem(SKEY, JSON.stringify({ when: when, data: snap() }));
+      stamp(when);
+    } catch (e) {
+      stamp('');
+      if (sInfo) { sInfo.hidden = false; sInfo.textContent = 'บันทึกไม่ได้ — เบราว์เซอร์ไม่ให้เก็บข้อมูล'; }
+    }
+  }
+  if (bSave) bSave.addEventListener('click', save);
+  if (bDrop) bDrop.addEventListener('click', function () {
+    try { localStorage.removeItem(SKEY); } catch (e) {}
+    stamp('');
+  });
+  (function () {                          // โหลดของที่บันทึกไว้ ถ้ามี
+    var raw = null;
+    try { raw = localStorage.getItem(SKEY); } catch (e) {}
+    if (!raw) return;
+    try {
+      var o = JSON.parse(raw);
+      restore(o.data);
+      undo = []; redo = [];               // ของที่บันทึกถือเป็นจุดตั้งต้นใหม่
+      paintBtns();
+      stamp(o.when);
+    } catch (e) {}
+  })();
+
+  // ── ดาวน์โหลด .flow ที่แก้แล้ว (เฉพาะเส้นที่ถูกย้ายปลาย) ─────────────
+  function reEsc(s) { return s.replace(/[.*+?^${}()|[\]\\\/-]/g, '\\$&'); }
+  function updatedFlow() {
+    var lines = SRC.split('\n');
+    for (var i = 0; i < E.length; i++) {
+      var e = E[i];
+      if (!e || (e.from === e.of && e.to === e.ot)) continue;
+      // จับป้ายตามที่ดีไซเนอร์พิมพ์จริง (เช่น -ไม่ใช่->) ไม่ใช่ตัวที่ normalize
+      // แล้ว (-No->) ไม่งั้นบรรทัดภาษาไทยจะหาไม่เจอ
+      var re = new RegExp('^(\\s*)' + reEsc(e.of) + '\\s+(\\S+)\\s+' +
+                          reEsc(e.ot) + '\\s*(#.*)?$');
+      for (var j = 0; j < lines.length; j++) {
+        var m = lines[j].match(re);
+        if (!m) continue;
+        lines[j] = m[1] + e.from + ' ' + m[2] + ' ' + e.to +
+          '   # ย้ายปลายเส้นในหน้า HTML — เดิม ' + e.of + ' ' + m[2] + ' ' + e.ot;
+        break;
+      }
+    }
+    return lines.join('\n');
+  }
+  var bDl = document.getElementById('ed-ch-dl');
+  if (bDl) bDl.addEventListener('click', function () {
+    if (!SRC) { bDl.textContent = 'ไม่มีต้นฉบับ .flow ฝังมาในไฟล์นี้'; return; }
+    var blob = new Blob([updatedFlow()], { type: 'text/plain;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = SRCNAME.replace(/\.flow$/, '') + '-edited.flow';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  });
+
+  addEventListener('keydown', function (ev) {
+    if ((ev.metaKey || ev.ctrlKey) && (ev.key === 's' || ev.key === 'S')) {
+      ev.preventDefault();
+      save();
+    }
+  });
+
   paintBtns();
   paintChanges();
   paintZoom();
@@ -1616,8 +1731,11 @@ HTML_TMPL = """<!DOCTYPE html>
   .sub b {{ font-weight:600; color:var(--ink); }}
   main {{ display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;
     padding:24px 28px 80px; }}
-  .lg {{ position:sticky; top:104px; flex:0 0 300px; background:var(--paper);
+  /* วางใต้ผัง ไม่ใช่เหนือผัง — ผังคือของหลักของหน้านี้ */
+  .lg {{ flex:1 0 100%; background:var(--paper);
     border:1px solid var(--hairline); border-radius:16px; padding:20px 24px; }}
+  .lg-b {{ display:grid; gap:4px 28px;
+    grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); }}
   .lg-t {{ font-family:inherit; font-weight:700; font-size:15px; color:var(--ink);
     background:none; border:0; border-bottom:2px solid var(--ink); padding:0 0 2px;
     display:flex; gap:10px; align-items:center; cursor:pointer; }}
@@ -1762,8 +1880,7 @@ HTML_TMPL = """<!DOCTYPE html>
   </div>
 </header>
 <main>
-  {legend}
-  <div class="canvas">
+  <div class="canvas" id="cv">
     <div class="zoom" role="group" aria-label="เครื่องมือผัง">
       <button id="z-out" title="ย่อ (Ctrl/⌘ -)" aria-label="ย่อ">−</button>
       <span class="hint" id="z-now">100%</span>
@@ -1775,6 +1892,10 @@ HTML_TMPL = """<!DOCTYPE html>
       <button id="ed-redo" disabled title="ทำซ้ำ (Ctrl/⌘ ⇧ Z)">↷ ทำซ้ำ</button>
       <button id="ed-reset" disabled title="คืนตำแหน่งที่สคริปต์คำนวณไว้">คืนตำแหน่งเดิม</button>
       <span class="sep"></span>
+      <button id="ed-save" title="เก็บที่แก้ไว้ในเครื่อง (Ctrl/⌘ S)">💾 บันทึก</button>
+      <button id="ed-drop" hidden title="ลบสิ่งที่บันทึกไว้ในเครื่อง">ล้างที่บันทึก</button>
+      <span class="hint" id="ed-saved" hidden></span>
+      <span class="sep"></span>
       <span class="hint">canvas {W}×{H}px · ลากกล่องหรือลากเส้นเพื่อจัดสายตา
         <kbd>Ctrl/⌘ Z</kbd> <kbd>Ctrl/⌘ +</kbd> <kbd>Ctrl/⌘ -</kbd> <kbd>Ctrl/⌘ 0</kbd></span>
       <span class="hint dirty-note" id="ed-dirty" hidden>ตำแหน่งถูกเลื่อนด้วยมือแล้ว —
@@ -1783,6 +1904,7 @@ HTML_TMPL = """<!DOCTYPE html>
         <b style="color:var(--ink)">เส้นที่ถูกย้ายปลาย</b>
         <span id="ed-ch-list"></span>
         <button id="ed-ch-copy">คัดลอกเป็นบรรทัด .flow</button>
+        <button id="ed-ch-dl">ดาวน์โหลด .flow ที่แก้แล้ว</button>
         <span>ย้ายปลายเส้น = เปลี่ยนความหมายของ flow — ต้องเอาไปแก้ใน .flow แล้ว render ใหม่</span>
       </div>
     </div>
@@ -1808,6 +1930,7 @@ HTML_TMPL = """<!DOCTYPE html>
     </svg>
     </div>
   </div>
+  {legend}
   {report}
   {ledger}
 </main>
@@ -1892,6 +2015,9 @@ HTML_TMPL = """<!DOCTYPE html>
 </script>
 <script>
 {editor_js}
+</script>
+<script type="application/json" id="flow-src" data-name="{src_name}">
+{src_json}
 </script>
 <script type="application/json" id="flow-meta">
 {meta}
