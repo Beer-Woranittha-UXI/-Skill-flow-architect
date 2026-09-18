@@ -656,7 +656,7 @@ def esc(s):
 # data-* มีไว้ให้ตัวแก้ผังใน .html เท่านั้น — .svg/.png ที่ส่งต่อให้ Figma/dev
 # ต้องสะอาดเหมือนเดิม จึงถอดออกก่อนเขียนไฟล์ภาพ
 DATA_ATTR_RE = re.compile(
-    r'\s(?:data-(?:e|from|to|op|pts|dist|lw|id|x|y|w|h))="[^"]*"')
+    r'\s(?:data-(?:e|from|to|op|pts|dist|lw|id|kind|x|y|w|h))="[^"]*"')
 
 
 def plain(frag):
@@ -694,7 +694,7 @@ def node_svg(n):
     inner = "\n      ".join(out)
     # data-* คือสิ่งที่ตัวแก้ผังใน .html ใช้ — ไม่มีผลกับ .svg/.png ที่ส่งต่อ
     return (f'<g id="n-{esc(n["id"])}" class="node" data-id="{esc(n["id"])}" '
-            f'data-x="{x:.1f}" data-y="{y:.1f}" '
+            f'data-kind="{shape}" data-x="{x:.1f}" data-y="{y:.1f}" '
             f'data-w="{w:.1f}" data-h="{h:.1f}">\n      '
             f'{inner}\n    </g>')
 
@@ -1177,12 +1177,37 @@ EDITOR_JS = r"""
     return { x: +g.dataset.x + o[0], y: +g.dataset.y + o[1],
              w: +g.dataset.w, h: +g.dataset.h };
   }
-  function anchors(id) {
+  // จุดเกาะ: กล่องสี่เหลี่ยมมี 3 ช่องต่อด้าน (25/50/75%) เส้นหลายเส้นจะได้
+  // ไม่กระจุกจุดเดียว · ข้าวหลามตัดมีช่องเดียวคือปลายแหลม เพราะ 25/75 ของ
+  // กรอบจะไปตกในมุมที่ไม่มีรูปทรงอยู่จริง (และ G6 ให้เส้นทึบรวมที่ปลายซ้ายอยู่แล้ว)
+  function slots(id, side) {
     var r = rectOf(id);
-    return [{ p: [r.x, r.y + r.h / 2], d: 'L' },
-            { p: [r.x + r.w, r.y + r.h / 2], d: 'R' },
-            { p: [r.x + r.w / 2, r.y], d: 'T' },
-            { p: [r.x + r.w / 2, r.y + r.h], d: 'B' }];
+    var dia = nodeEls[id].dataset.kind === 'diamond';
+    var ts = dia ? [0.5] : [0.25, 0.5, 0.75];
+    return ts.map(function (t) {
+      if (side === 'L') return [r.x, r.y + r.h * t];
+      if (side === 'R') return [r.x + r.w, r.y + r.h * t];
+      if (side === 'T') return [r.x + r.w * t, r.y];
+      return [r.x + r.w * t, r.y + r.h];
+    });
+  }
+  function anchors(id) {
+    var out = [];
+    ['L', 'R', 'T', 'B'].forEach(function (d) {
+      slots(id, d).forEach(function (p) { out.push({ p: p, d: d }); });
+    });
+    return out;
+  }
+  // จุดปลายเส้นอื่น ๆ ที่เกาะกล่องนี้อยู่แล้ว — ใช้เลี่ยงไม่ให้ทับกัน
+  function takenOn(id, exceptI) {
+    var out = [];
+    for (var i = 0; i < E.length; i++) {
+      if (i === exceptI || !E[i]) continue;
+      var e = E[i], p = e.pts;
+      if (e.from === id) out.push(p[0]);
+      if (e.to === id) out.push(p[p.length - 1]);
+    }
+    return out;
   }
   function nodeAt(x, y) {
     var hitId = null;
@@ -1223,28 +1248,64 @@ EDITOR_JS = r"""
     if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? ['R', 'L'] : ['L', 'R'];
     return dy >= 0 ? ['B', 'T'] : ['T', 'B'];
   }
-  function pickAnchor(id, side) {
-    var a = anchors(id), r = null;
-    a.forEach(function (x) { if (x.d === side) r = x; });
-    return r;
+  function pickAnchor(id, side, exceptI) {
+    var cand = slots(id, side), used = takenOn(id, exceptI), best = null, bs = -1;
+    cand.forEach(function (p) {
+      var far = 1e9;
+      used.forEach(function (u) {
+        far = Math.min(far, Math.hypot(u[0] - p[0], u[1] - p[1]));
+      });
+      if (far > bs) { bs = far; best = p; }     // เลือกช่องที่ห่างของเดิมที่สุด
+    });
+    return best ? { p: best, d: side } : null;
+  }
+
+  // ── หาเลนว่าง: ถ้าแนวที่จะใช้มีเส้นอื่นจองอยู่แล้ว เลื่อนออกทีละ 60 ─────
+  function lanesUsed(exceptI, vertical) {
+    var out = [];
+    for (var i = 0; i < E.length; i++) {
+      if (i === exceptI || !E[i]) continue;
+      var p = E[i].pts;
+      for (var j = 0; j < p.length - 1; j++) {
+        var a = p[j], b = p[j + 1];
+        if (vertical && Math.abs(a[0] - b[0]) < 0.5 && Math.abs(a[1] - b[1]) > 1) out.push(a[0]);
+        if (!vertical && Math.abs(a[1] - b[1]) < 0.5 && Math.abs(a[0] - b[0]) > 1) out.push(a[1]);
+      }
+    }
+    return out;
+  }
+  function freeLane(v, used) {
+    function busy(t) {
+      for (var i = 0; i < used.length; i++) if (Math.abs(used[i] - t) < 40) return true;
+      return false;
+    }
+    if (!busy(v)) return v;
+    for (var n = 1; n <= 8; n++) {
+      if (!busy(v + n * 60)) return v + n * 60;
+      if (!busy(v - n * 60)) return v - n * 60;
+    }
+    return v;
   }
   // เดินเส้นใหม่ทั้งเส้นให้สั้นและตรงที่สุดระหว่างสองกล่อง ณ ตำแหน่งปัจจุบัน
   function autoRoute(i) {
     var e = E[i];
     if (!e || e.from === e.to) return false;
     var pair = bestPair(rectOf(e.from), rectOf(e.to));
-    var A = pickAnchor(e.from, pair[0]), B = pickAnchor(e.to, pair[1]);
+    var A = pickAnchor(e.from, pair[0], i), B = pickAnchor(e.to, pair[1], i);
     if (!A || !B) return false;
-    e.pts = tidy(reroute(A.p, A.d, B.p, B.d));
+    e.pts = tidy(reroute(A.p, A.d, B.p, B.d, i));
     return true;
   }
 
-  function reroute(A, dA, B, dB) {
+  function reroute(A, dA, B, dB, exceptI) {
     var a1 = stubOf(A, dA), b1 = stubOf(B, dB), mid;
+    var ex = exceptI === undefined ? -1 : exceptI;
     if (isH(dA) && isH(dB)) {
-      var mx = (a1[0] + b1[0]) / 2; mid = [[mx, a1[1]], [mx, b1[1]]];
+      var mx = freeLane((a1[0] + b1[0]) / 2, lanesUsed(ex, true));
+      mid = [[mx, a1[1]], [mx, b1[1]]];
     } else if (!isH(dA) && !isH(dB)) {
-      var my = (a1[1] + b1[1]) / 2; mid = [[a1[0], my], [b1[0], my]];
+      var my = freeLane((a1[1] + b1[1]) / 2, lanesUsed(ex, false));
+      mid = [[a1[0], my], [b1[0], my]];
     } else if (isH(dA)) { mid = [[b1[0], a1[1]]]; }
     else { mid = [[a1[0], b1[1]]]; }
     var raw = [A, a1].concat(mid, [b1, B]), out = [raw[0]];
@@ -1378,6 +1439,46 @@ EDITOR_JS = r"""
     setTimeout(function () { bCopy.textContent = 'คัดลอกเป็นบรรทัด .flow'; }, 1500);
   });
 
+  // ── เตือนเมื่อเส้นทะลุกล่อง (G3) — เช็คสด ไม่ต้องรอ self_check ──────
+  function segHitsBox(a, b, r) {
+    var pad = 4;
+    var x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]);
+    var y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
+    return x1 > r.x + pad && x0 < r.x + r.w - pad &&
+           y1 > r.y + pad && y0 < r.y + r.h - pad;
+  }
+  function crossCount() {
+    var bad = [];
+    for (var i = 0; i < E.length; i++) {
+      var e = E[i];
+      if (!e) continue;
+      var hit = false;
+      Object.keys(nodeEls).forEach(function (id) {
+        if (hit || id === e.from || id === e.to) return;
+        var r = rectOf(id);
+        for (var j = 0; j < e.pts.length - 1; j++) {
+          if (segHitsBox(e.pts[j], e.pts[j + 1], r)) { hit = true; return; }
+        }
+      });
+      if (hit) bad.push(i);
+    }
+    return bad;
+  }
+  var crossEl = document.getElementById('ed-cross');
+  var bad = [];
+  function paintCross() {
+    bad = crossCount();
+    if (!crossEl) return;
+    crossEl.hidden = !bad.length;
+    crossEl.textContent = bad.length ? '⚠ เส้นทะลุกล่อง ' + bad.length + ' เส้น (คลิกเพื่อไฮไลต์)' : '';
+  }
+  if (crossEl) crossEl.addEventListener('click', function () {
+    bad.forEach(function (i) {
+      E[i].path.classList.add('e-flag');
+      setTimeout(function () { E[i].path.classList.remove('e-flag'); }, 1600);
+    });
+  });
+
   function draw() {
     Object.keys(off).forEach(function (id) {
       var o = off[id];
@@ -1385,6 +1486,7 @@ EDITOR_JS = r"""
       else nodeEls[id].removeAttribute('transform');
     });
     for (var i = 0; i < E.length; i++) drawEdge(i);
+    paintCross();
   }
 
   // ── เลื่อนกล่อง: ปลายเส้นตามไปด้วย และยังตั้งฉากเหมือนเดิม ───────────
@@ -1608,6 +1710,7 @@ EDITOR_JS = r"""
       svg.releasePointerCapture(ev.pointerId);
     }
     drag = null;
+    paintCross();
     paintBtns();
   }
   svg.addEventListener('pointerup', endDrag);
@@ -1638,6 +1741,7 @@ EDITOR_JS = r"""
     });
     if (!changed) undo.pop();
     if (onEdge && list.length === 1) showHandles(list[0]);
+    paintCross();
     paintBtns();
   });
 
@@ -1754,6 +1858,7 @@ EDITOR_JS = r"""
 
   paintBtns();
   paintChanges();
+  paintCross();
   paintZoom();
 })();
 """
@@ -1899,6 +2004,9 @@ HTML_TMPL = """<!DOCTYPE html>
   .e-hit {{ fill:none; stroke:transparent; stroke-width:28;
     pointer-events:stroke; cursor:move; }}
   .e-h {{ fill:var(--paper); stroke:var(--ink); stroke-width:3; cursor:crosshair; }}
+  /* คำเตือนของตัวแก้ผัง ไม่ใช่สีความหมายในผัง — ไม่ติดไปกับ .svg/.png */
+  .zoom button.warn {{ color:var(--no); border-color:var(--no); }}
+  .e-flag {{ stroke-width:16; }}
   .e-h[hidden] {{ display:none; }}
   .node.target rect, .node.target path {{ stroke:var(--ink); stroke-width:5; }}
   .ed-ch {{ flex:1 0 100%; display:flex; gap:10px; align-items:center;
@@ -1951,6 +2059,7 @@ HTML_TMPL = """<!DOCTYPE html>
     <button id="ed-save" title="เก็บที่แก้ไว้ในเครื่อง (Ctrl/⌘ S)">💾 บันทึก</button>
     <button id="ed-drop" hidden title="ลบสิ่งที่บันทึกไว้ในเครื่อง">ล้างที่บันทึก</button>
     <span class="hint" id="ed-saved" hidden></span>
+    <button class="warn" id="ed-cross" hidden></button>
     <span class="sep"></span>
     <span class="hint">canvas {W}×{H}px · ลากกล่องหรือลากเส้นเพื่อจัดสายตา
       <kbd>Ctrl/⌘ Z</kbd> <kbd>Ctrl/⌘ +</kbd> <kbd>Ctrl/⌘ -</kbd> <kbd>Ctrl/⌘ 0</kbd></span>

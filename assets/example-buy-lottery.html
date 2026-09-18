@@ -138,6 +138,9 @@
   .e-hit { fill:none; stroke:transparent; stroke-width:28;
     pointer-events:stroke; cursor:move; }
   .e-h { fill:var(--paper); stroke:var(--ink); stroke-width:3; cursor:crosshair; }
+  /* คำเตือนของตัวแก้ผัง ไม่ใช่สีความหมายในผัง — ไม่ติดไปกับ .svg/.png */
+  .zoom button.warn { color:var(--no); border-color:var(--no); }
+  .e-flag { stroke-width:16; }
   .e-h[hidden] { display:none; }
   .node.target rect, .node.target path { stroke:var(--ink); stroke-width:5; }
   .ed-ch { flex:1 0 100%; display:flex; gap:10px; align-items:center;
@@ -190,6 +193,7 @@
     <button id="ed-save" title="เก็บที่แก้ไว้ในเครื่อง (Ctrl/⌘ S)">💾 บันทึก</button>
     <button id="ed-drop" hidden title="ลบสิ่งที่บันทึกไว้ในเครื่อง">ล้างที่บันทึก</button>
     <span class="hint" id="ed-saved" hidden></span>
+    <button class="warn" id="ed-cross" hidden></button>
     <span class="sep"></span>
     <span class="hint">canvas 6650×3510px · ลากกล่องหรือลากเส้นเพื่อจัดสายตา
       <kbd>Ctrl/⌘ Z</kbd> <kbd>Ctrl/⌘ +</kbd> <kbd>Ctrl/⌘ -</kbd> <kbd>Ctrl/⌘ 0</kbd></span>
@@ -240,52 +244,52 @@
     <path class="e-solid" marker-end="url(#arw)" data-e="12" data-from="p1" data-to="l1" data-op="->" data-pts="1929.0,1033.0 2254.0,1033.0 2254.0,1589.0 2491.0,1589.0" d="M 1929.0 1033.0 L 2238.0 1033.0 A 16.0 16.0 0 0 1 2254.0 1049.0 L 2254.0 1573.0 A 16.0 16.0 0 0 0 2270.0 1589.0 L 2491.0 1589.0"/>
     <circle class="e-dot" data-e="12" cx="1929.0" cy="1033.0" r="6"/>
     <path class="e-perm" marker-end="url(#arw-perm)" data-e="13" data-from="p4" data-to="p4__perm" data-op="~>" data-pts="5489.0,393.0 5489.0,453.0 5914.0,453.0 5914.0,3257.0 6089.0,3257.0" d="M 5489.0 393.0 L 5489.0 437.0 A 16.0 16.0 0 0 0 5505.0 453.0 L 5898.0 453.0 A 16.0 16.0 0 0 1 5914.0 469.0 L 5914.0 3241.0 A 16.0 16.0 0 0 0 5930.0 3257.0 L 6089.0 3257.0"/>
-    <g id="n-s0" class="node" data-id="s0" data-x="225.0" data-y="337.0" data-w="224.0" data-h="56.0">
+    <g id="n-s0" class="node" data-id="s0" data-kind="oval" data-x="225.0" data-y="337.0" data-w="224.0" data-h="56.0">
       <rect class="n-oval" x="225.0" y="337.0" width="224.0" height="56.0" rx="28.0"/>
       <text class="t-on" x="337.0" y="365.0" font-size="16">กดซื้อ</text>
     </g>
-    <g id="n-d1" class="node" data-id="d1" data-x="949.0" data-y="225.0" data-w="280.0" data-h="280.0">
+    <g id="n-d1" class="node" data-id="d1" data-kind="diamond" data-x="949.0" data-y="225.0" data-w="280.0" data-h="280.0">
       <path class="n-dia" d="M 1077.7 236.3 A 16.0 16.0 0 0 1 1100.3 236.3 L 1217.7 353.7 A 16.0 16.0 0 0 1 1217.7 376.3 L 1100.3 493.7 A 16.0 16.0 0 0 1 1077.7 493.7 L 960.3 376.3 A 16.0 16.0 0 0 1 960.3 353.7 Z"/>
       <text class="t-on" x="1089.0" y="353.0" font-size="16">ล็อกอินแล้ว</text>
       <text class="t-on" x="1089.0" y="377.0" font-size="16">ใช่หรือไม่?</text>
     </g>
-    <g id="n-p1" class="node" data-id="p1" data-x="1729.0" data-y="1005.0" data-w="200.0" data-h="56.0">
+    <g id="n-p1" class="node" data-id="p1" data-kind="rect" data-x="1729.0" data-y="1005.0" data-w="200.0" data-h="56.0">
       <rect class="n-rect" x="1729.0" y="1005.0" width="200.0" height="56.0" rx="16"/>
       <text class="t-on" x="1829.0" y="1033.0" font-size="16">หน้าเข้าสู่ระบบ</text>
     </g>
-    <g id="n-d2" class="node" data-id="d2" data-x="2429.0" data-y="225.0" data-w="280.0" data-h="280.0">
+    <g id="n-d2" class="node" data-id="d2" data-kind="diamond" data-x="2429.0" data-y="225.0" data-w="280.0" data-h="280.0">
       <path class="n-dia" d="M 2557.7 236.3 A 16.0 16.0 0 0 1 2580.3 236.3 L 2697.7 353.7 A 16.0 16.0 0 0 1 2697.7 376.3 L 2580.3 493.7 A 16.0 16.0 0 0 1 2557.7 493.7 L 2440.3 376.3 A 16.0 16.0 0 0 1 2440.3 353.7 Z"/>
       <text class="t-on" x="2569.0" y="341.0" font-size="16">ยืนยันตัวตน</text>
       <text class="t-on" x="2569.0" y="365.0" font-size="16">(KYC) แล้ว</text>
       <text class="t-on" x="2569.0" y="389.0" font-size="16">ใช่หรือไม่?</text>
     </g>
-    <g id="n-p2" class="node" data-id="p2" data-x="3209.0" data-y="2117.0" data-w="200.0" data-h="56.0">
+    <g id="n-p2" class="node" data-id="p2" data-kind="rect" data-x="3209.0" data-y="2117.0" data-w="200.0" data-h="56.0">
       <rect class="n-rect" x="3209.0" y="2117.0" width="200.0" height="56.0" rx="16"/>
       <text class="t-on" x="3309.0" y="2145.0" font-size="16">หน้ายืนยันตัวตน</text>
     </g>
-    <g id="n-d3" class="node" data-id="d3" data-x="3909.0" data-y="225.0" data-w="280.0" data-h="280.0">
+    <g id="n-d3" class="node" data-id="d3" data-kind="diamond" data-x="3909.0" data-y="225.0" data-w="280.0" data-h="280.0">
       <path class="n-dia" d="M 4037.7 236.3 A 16.0 16.0 0 0 1 4060.3 236.3 L 4177.7 353.7 A 16.0 16.0 0 0 1 4177.7 376.3 L 4060.3 493.7 A 16.0 16.0 0 0 1 4037.7 493.7 L 3920.3 376.3 A 16.0 16.0 0 0 1 3920.3 353.7 Z"/>
       <text class="t-on" x="4049.0" y="341.0" font-size="16">ยอดเงินในกระ</text>
       <text class="t-on" x="4049.0" y="365.0" font-size="16">เป๋าพอ</text>
       <text class="t-on" x="4049.0" y="389.0" font-size="16">ใช่หรือไม่?</text>
     </g>
-    <g id="n-p3" class="node" data-id="p3" data-x="4689.0" data-y="2673.0" data-w="200.0" data-h="56.0">
+    <g id="n-p3" class="node" data-id="p3" data-kind="rect" data-x="4689.0" data-y="2673.0" data-w="200.0" data-h="56.0">
       <rect class="n-rect" x="4689.0" y="2673.0" width="200.0" height="56.0" rx="16"/>
       <text class="t-on" x="4789.0" y="2701.0" font-size="16">หน้าเติมเงิน</text>
     </g>
-    <g id="n-p4" class="node" data-id="p4" data-x="5389.0" data-y="337.0" data-w="200.0" data-h="56.0">
+    <g id="n-p4" class="node" data-id="p4" data-kind="rect" data-x="5389.0" data-y="337.0" data-w="200.0" data-h="56.0">
       <rect class="n-rect" x="5389.0" y="337.0" width="200.0" height="56.0" rx="16"/>
       <text class="t-on" x="5489.0" y="365.0" font-size="16">หน้าชำระเงิน</text>
     </g>
-    <g id="n-e1" class="node" data-id="e1" data-x="6145.0" data-y="337.0" data-w="224.0" data-h="56.0">
+    <g id="n-e1" class="node" data-id="e1" data-kind="oval" data-x="6145.0" data-y="337.0" data-w="224.0" data-h="56.0">
       <rect class="n-oval" x="6145.0" y="337.0" width="224.0" height="56.0" rx="28.0"/>
       <text class="t-on" x="6257.0" y="365.0" font-size="16">ซื้อสำเร็จ</text>
     </g>
-    <g id="n-l1" class="node" data-id="l1" data-x="2491.0" data-y="1561.0" data-w="156.0" data-h="56.0">
+    <g id="n-l1" class="node" data-id="l1" data-kind="chip" data-x="2491.0" data-y="1561.0" data-w="156.0" data-h="56.0">
       <rect class="n-chip" x="2491.0" y="1561.0" width="156.0" height="56.0" rx="8"/>
       <text class="t-on" x="2569.0" y="1589.0" font-size="16">Flow ยืนยัน OTP</text>
     </g>
-    <g id="n-p4__perm" class="node" data-id="p4__perm" data-x="6089.0" data-y="3229.0" data-w="336.0" data-h="56.0">
+    <g id="n-p4__perm" class="node" data-id="p4__perm" data-kind="note" data-x="6089.0" data-y="3229.0" data-w="336.0" data-h="56.0">
       <rect class="n-note" x="6089.0" y="3229.0" width="336.0" height="56.0" rx="16"/>
       <text class="t-note" x="6257.0" y="3257.0" font-size="13">ตัดเงินไม่ผ่าน / สลากถูกคนอื่นซื้อตัด / หมดเวลาจอง</text>
     </g>
@@ -517,12 +521,37 @@
     return { x: +g.dataset.x + o[0], y: +g.dataset.y + o[1],
              w: +g.dataset.w, h: +g.dataset.h };
   }
-  function anchors(id) {
+  // จุดเกาะ: กล่องสี่เหลี่ยมมี 3 ช่องต่อด้าน (25/50/75%) เส้นหลายเส้นจะได้
+  // ไม่กระจุกจุดเดียว · ข้าวหลามตัดมีช่องเดียวคือปลายแหลม เพราะ 25/75 ของ
+  // กรอบจะไปตกในมุมที่ไม่มีรูปทรงอยู่จริง (และ G6 ให้เส้นทึบรวมที่ปลายซ้ายอยู่แล้ว)
+  function slots(id, side) {
     var r = rectOf(id);
-    return [{ p: [r.x, r.y + r.h / 2], d: 'L' },
-            { p: [r.x + r.w, r.y + r.h / 2], d: 'R' },
-            { p: [r.x + r.w / 2, r.y], d: 'T' },
-            { p: [r.x + r.w / 2, r.y + r.h], d: 'B' }];
+    var dia = nodeEls[id].dataset.kind === 'diamond';
+    var ts = dia ? [0.5] : [0.25, 0.5, 0.75];
+    return ts.map(function (t) {
+      if (side === 'L') return [r.x, r.y + r.h * t];
+      if (side === 'R') return [r.x + r.w, r.y + r.h * t];
+      if (side === 'T') return [r.x + r.w * t, r.y];
+      return [r.x + r.w * t, r.y + r.h];
+    });
+  }
+  function anchors(id) {
+    var out = [];
+    ['L', 'R', 'T', 'B'].forEach(function (d) {
+      slots(id, d).forEach(function (p) { out.push({ p: p, d: d }); });
+    });
+    return out;
+  }
+  // จุดปลายเส้นอื่น ๆ ที่เกาะกล่องนี้อยู่แล้ว — ใช้เลี่ยงไม่ให้ทับกัน
+  function takenOn(id, exceptI) {
+    var out = [];
+    for (var i = 0; i < E.length; i++) {
+      if (i === exceptI || !E[i]) continue;
+      var e = E[i], p = e.pts;
+      if (e.from === id) out.push(p[0]);
+      if (e.to === id) out.push(p[p.length - 1]);
+    }
+    return out;
   }
   function nodeAt(x, y) {
     var hitId = null;
@@ -563,28 +592,64 @@
     if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? ['R', 'L'] : ['L', 'R'];
     return dy >= 0 ? ['B', 'T'] : ['T', 'B'];
   }
-  function pickAnchor(id, side) {
-    var a = anchors(id), r = null;
-    a.forEach(function (x) { if (x.d === side) r = x; });
-    return r;
+  function pickAnchor(id, side, exceptI) {
+    var cand = slots(id, side), used = takenOn(id, exceptI), best = null, bs = -1;
+    cand.forEach(function (p) {
+      var far = 1e9;
+      used.forEach(function (u) {
+        far = Math.min(far, Math.hypot(u[0] - p[0], u[1] - p[1]));
+      });
+      if (far > bs) { bs = far; best = p; }     // เลือกช่องที่ห่างของเดิมที่สุด
+    });
+    return best ? { p: best, d: side } : null;
+  }
+
+  // ── หาเลนว่าง: ถ้าแนวที่จะใช้มีเส้นอื่นจองอยู่แล้ว เลื่อนออกทีละ 60 ─────
+  function lanesUsed(exceptI, vertical) {
+    var out = [];
+    for (var i = 0; i < E.length; i++) {
+      if (i === exceptI || !E[i]) continue;
+      var p = E[i].pts;
+      for (var j = 0; j < p.length - 1; j++) {
+        var a = p[j], b = p[j + 1];
+        if (vertical && Math.abs(a[0] - b[0]) < 0.5 && Math.abs(a[1] - b[1]) > 1) out.push(a[0]);
+        if (!vertical && Math.abs(a[1] - b[1]) < 0.5 && Math.abs(a[0] - b[0]) > 1) out.push(a[1]);
+      }
+    }
+    return out;
+  }
+  function freeLane(v, used) {
+    function busy(t) {
+      for (var i = 0; i < used.length; i++) if (Math.abs(used[i] - t) < 40) return true;
+      return false;
+    }
+    if (!busy(v)) return v;
+    for (var n = 1; n <= 8; n++) {
+      if (!busy(v + n * 60)) return v + n * 60;
+      if (!busy(v - n * 60)) return v - n * 60;
+    }
+    return v;
   }
   // เดินเส้นใหม่ทั้งเส้นให้สั้นและตรงที่สุดระหว่างสองกล่อง ณ ตำแหน่งปัจจุบัน
   function autoRoute(i) {
     var e = E[i];
     if (!e || e.from === e.to) return false;
     var pair = bestPair(rectOf(e.from), rectOf(e.to));
-    var A = pickAnchor(e.from, pair[0]), B = pickAnchor(e.to, pair[1]);
+    var A = pickAnchor(e.from, pair[0], i), B = pickAnchor(e.to, pair[1], i);
     if (!A || !B) return false;
-    e.pts = tidy(reroute(A.p, A.d, B.p, B.d));
+    e.pts = tidy(reroute(A.p, A.d, B.p, B.d, i));
     return true;
   }
 
-  function reroute(A, dA, B, dB) {
+  function reroute(A, dA, B, dB, exceptI) {
     var a1 = stubOf(A, dA), b1 = stubOf(B, dB), mid;
+    var ex = exceptI === undefined ? -1 : exceptI;
     if (isH(dA) && isH(dB)) {
-      var mx = (a1[0] + b1[0]) / 2; mid = [[mx, a1[1]], [mx, b1[1]]];
+      var mx = freeLane((a1[0] + b1[0]) / 2, lanesUsed(ex, true));
+      mid = [[mx, a1[1]], [mx, b1[1]]];
     } else if (!isH(dA) && !isH(dB)) {
-      var my = (a1[1] + b1[1]) / 2; mid = [[a1[0], my], [b1[0], my]];
+      var my = freeLane((a1[1] + b1[1]) / 2, lanesUsed(ex, false));
+      mid = [[a1[0], my], [b1[0], my]];
     } else if (isH(dA)) { mid = [[b1[0], a1[1]]]; }
     else { mid = [[a1[0], b1[1]]]; }
     var raw = [A, a1].concat(mid, [b1, B]), out = [raw[0]];
@@ -718,6 +783,46 @@
     setTimeout(function () { bCopy.textContent = 'คัดลอกเป็นบรรทัด .flow'; }, 1500);
   });
 
+  // ── เตือนเมื่อเส้นทะลุกล่อง (G3) — เช็คสด ไม่ต้องรอ self_check ──────
+  function segHitsBox(a, b, r) {
+    var pad = 4;
+    var x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]);
+    var y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
+    return x1 > r.x + pad && x0 < r.x + r.w - pad &&
+           y1 > r.y + pad && y0 < r.y + r.h - pad;
+  }
+  function crossCount() {
+    var bad = [];
+    for (var i = 0; i < E.length; i++) {
+      var e = E[i];
+      if (!e) continue;
+      var hit = false;
+      Object.keys(nodeEls).forEach(function (id) {
+        if (hit || id === e.from || id === e.to) return;
+        var r = rectOf(id);
+        for (var j = 0; j < e.pts.length - 1; j++) {
+          if (segHitsBox(e.pts[j], e.pts[j + 1], r)) { hit = true; return; }
+        }
+      });
+      if (hit) bad.push(i);
+    }
+    return bad;
+  }
+  var crossEl = document.getElementById('ed-cross');
+  var bad = [];
+  function paintCross() {
+    bad = crossCount();
+    if (!crossEl) return;
+    crossEl.hidden = !bad.length;
+    crossEl.textContent = bad.length ? '⚠ เส้นทะลุกล่อง ' + bad.length + ' เส้น (คลิกเพื่อไฮไลต์)' : '';
+  }
+  if (crossEl) crossEl.addEventListener('click', function () {
+    bad.forEach(function (i) {
+      E[i].path.classList.add('e-flag');
+      setTimeout(function () { E[i].path.classList.remove('e-flag'); }, 1600);
+    });
+  });
+
   function draw() {
     Object.keys(off).forEach(function (id) {
       var o = off[id];
@@ -725,6 +830,7 @@
       else nodeEls[id].removeAttribute('transform');
     });
     for (var i = 0; i < E.length; i++) drawEdge(i);
+    paintCross();
   }
 
   // ── เลื่อนกล่อง: ปลายเส้นตามไปด้วย และยังตั้งฉากเหมือนเดิม ───────────
@@ -948,6 +1054,7 @@
       svg.releasePointerCapture(ev.pointerId);
     }
     drag = null;
+    paintCross();
     paintBtns();
   }
   svg.addEventListener('pointerup', endDrag);
@@ -978,6 +1085,7 @@
     });
     if (!changed) undo.pop();
     if (onEdge && list.length === 1) showHandles(list[0]);
+    paintCross();
     paintBtns();
   });
 
@@ -1094,6 +1202,7 @@
 
   paintBtns();
   paintChanges();
+  paintCross();
   paintZoom();
 })();
 
