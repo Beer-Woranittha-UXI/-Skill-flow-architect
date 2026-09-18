@@ -1215,6 +1215,30 @@ EDITOR_JS = r"""
     if (Math.abs(b[0] - a[0]) >= Math.abs(b[1] - a[1])) return b[0] > a[0] ? 'R' : 'L';
     return b[1] > a[1] ? 'B' : 'T';
   }
+  // เลือกด้านที่เส้นควรออก-เข้า จากตำแหน่งจริงของสองกล่องในขณะนั้น
+  // ไล่ซ้าย→ขวาเป็นหลักตาม F-01 ถ้าเยื้องกันแนวตั้งมากกว่าค่อยใช้บน-ล่าง
+  function bestPair(ra, rb) {
+    var dx = (rb.x + rb.w / 2) - (ra.x + ra.w / 2);
+    var dy = (rb.y + rb.h / 2) - (ra.y + ra.h / 2);
+    if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? ['R', 'L'] : ['L', 'R'];
+    return dy >= 0 ? ['B', 'T'] : ['T', 'B'];
+  }
+  function pickAnchor(id, side) {
+    var a = anchors(id), r = null;
+    a.forEach(function (x) { if (x.d === side) r = x; });
+    return r;
+  }
+  // เดินเส้นใหม่ทั้งเส้นให้สั้นและตรงที่สุดระหว่างสองกล่อง ณ ตำแหน่งปัจจุบัน
+  function autoRoute(i) {
+    var e = E[i];
+    if (!e || e.from === e.to) return false;
+    var pair = bestPair(rectOf(e.from), rectOf(e.to));
+    var A = pickAnchor(e.from, pair[0]), B = pickAnchor(e.to, pair[1]);
+    if (!A || !B) return false;
+    e.pts = tidy(reroute(A.p, A.d, B.p, B.d));
+    return true;
+  }
+
   function reroute(A, dA, B, dB) {
     var a1 = stubOf(A, dA), b1 = stubOf(B, dB), mid;
     if (isH(dA) && isH(dB)) {
@@ -1549,7 +1573,9 @@ EDITOR_JS = r"""
     if (drag.kind === 'node') {
       off[drag.id] = [drag.o[0] + dx, drag.o[1] + dy];
       drag.edges.forEach(function (m) {
-        E[m.i].pts = moveEnd(m.base, m.head, dx, dy);
+        // เส้นเดินใหม่เองตามกล่องที่ย้าย ถ้าเดินใหม่ไม่ได้ (เส้นวนเข้าตัวเอง)
+        // ค่อยถอยไปใช้วิธียืดปลายเส้นแบบเดิม
+        if (!autoRoute(m.i)) E[m.i].pts = moveEnd(m.base, m.head, dx, dy);
         drawEdge(m.i);
       });
       var g2 = nodeEls[drag.id];
@@ -1586,6 +1612,34 @@ EDITOR_JS = r"""
   }
   svg.addEventListener('pointerup', endDrag);
   svg.addEventListener('pointercancel', endDrag);
+
+  // ── ดับเบิลคลิก = จัดเส้นให้สั้นและตรงที่สุด ────────────────────────
+  // ที่เส้น: จัดเส้นนั้น · ที่กล่อง: จัดทุกเส้นที่ต่อกับกล่องนั้น
+  svg.addEventListener('dblclick', function (ev) {
+    var cls = ev.target.classList;
+    var onEdge = cls && (cls.contains('e-hit') || cls.contains('e-h'));
+    var g = ev.target.closest ? ev.target.closest('g.node') : null;
+    var list = [];
+    if (onEdge) {
+      var i = cls.contains('e-h') ? hovE : +ev.target.dataset.e;
+      if (i >= 0) list = [i];
+    } else if (g) {
+      var id = g.dataset.id;
+      for (var n = 0; n < E.length; n++) {
+        if (E[n] && (E[n].from === id || E[n].to === id)) list.push(n);
+      }
+    }
+    if (!list.length) return;
+    ev.preventDefault();
+    begin();
+    var changed = false;
+    list.forEach(function (n) {
+      if (autoRoute(n)) { drawEdge(n); changed = true; }
+    });
+    if (!changed) undo.pop();
+    if (onEdge && list.length === 1) showHandles(list[0]);
+    paintBtns();
+  });
 
   // ── คีย์ลัด ─────────────────────────────────────────────────────────
   addEventListener('keydown', function (ev) {
@@ -1822,7 +1876,10 @@ HTML_TMPL = """<!DOCTYPE html>
     border:1px solid var(--hairline); border-radius:16px; padding:8px; }}
   .zoomwrap {{ transform-origin:0 0; width:{W}px; }}
   svg.flow {{ display:block; width:{W}px; height:{H}px; }}
-  .zoom {{ display:flex; gap:8px; align-items:center; margin-bottom:12px; }}
+  /* แถบเครื่องมืออยู่ใต้ผัง เต็มความกว้าง — อยู่ในกรอบผังแล้วมันโดนบีบเป็น
+     คอลัมน์แคบ เพราะกรอบนั้นเป็นที่เลื่อนของ canvas ที่กว้างหลายหมื่น px */
+  .zoom {{ flex:1 0 100%; display:flex; flex-wrap:wrap; gap:8px;
+    align-items:center; margin:12px 0 0; }}
   .zoom button {{ font-family:inherit; font-size:12px; font-weight:600;
     color:var(--primary); background:var(--paper); border:1px solid var(--primary);
     border-radius:8px; padding:6px 12px; cursor:pointer; }}
@@ -1881,33 +1938,6 @@ HTML_TMPL = """<!DOCTYPE html>
 </header>
 <main>
   <div class="canvas" id="cv">
-    <div class="zoom" role="group" aria-label="เครื่องมือผัง">
-      <button id="z-out" title="ย่อ (Ctrl/⌘ -)" aria-label="ย่อ">−</button>
-      <span class="hint" id="z-now">100%</span>
-      <button id="z-in" title="ขยาย (Ctrl/⌘ +)" aria-label="ขยาย">+</button>
-      <button data-z="fit" aria-pressed="true">พอดีจอ</button>
-      <button data-z="1" title="ขนาดจริง (Ctrl/⌘ 0)">100%</button>
-      <span class="sep"></span>
-      <button id="ed-undo" disabled title="ย้อน (Ctrl/⌘ Z)">↶ ย้อน</button>
-      <button id="ed-redo" disabled title="ทำซ้ำ (Ctrl/⌘ ⇧ Z)">↷ ทำซ้ำ</button>
-      <button id="ed-reset" disabled title="คืนตำแหน่งที่สคริปต์คำนวณไว้">คืนตำแหน่งเดิม</button>
-      <span class="sep"></span>
-      <button id="ed-save" title="เก็บที่แก้ไว้ในเครื่อง (Ctrl/⌘ S)">💾 บันทึก</button>
-      <button id="ed-drop" hidden title="ลบสิ่งที่บันทึกไว้ในเครื่อง">ล้างที่บันทึก</button>
-      <span class="hint" id="ed-saved" hidden></span>
-      <span class="sep"></span>
-      <span class="hint">canvas {W}×{H}px · ลากกล่องหรือลากเส้นเพื่อจัดสายตา
-        <kbd>Ctrl/⌘ Z</kbd> <kbd>Ctrl/⌘ +</kbd> <kbd>Ctrl/⌘ -</kbd> <kbd>Ctrl/⌘ 0</kbd></span>
-      <span class="hint dirty-note" id="ed-dirty" hidden>ตำแหน่งถูกเลื่อนด้วยมือแล้ว —
-        อยู่แค่ในหน้านี้ ไม่ได้แก้ .flow และไม่เปลี่ยนผลตรวจ G1–G9</span>
-      <div class="ed-ch" id="ed-ch" hidden>
-        <b style="color:var(--ink)">เส้นที่ถูกย้ายปลาย</b>
-        <span id="ed-ch-list"></span>
-        <button id="ed-ch-copy">คัดลอกเป็นบรรทัด .flow</button>
-        <button id="ed-ch-dl">ดาวน์โหลด .flow ที่แก้แล้ว</button>
-        <span>ย้ายปลายเส้น = เปลี่ยนความหมายของ flow — ต้องเอาไปแก้ใน .flow แล้ว render ใหม่</span>
-      </div>
-    </div>
     <div class="zoomwrap" id="zw">
     <svg class="flow" viewBox="0 0 {W} {H}" role="img" aria-labelledby="ttl dsc">
       <title id="ttl">{flow}</title>
@@ -1928,6 +1958,33 @@ HTML_TMPL = """<!DOCTYPE html>
     {nodes}
     {labels}
     </svg>
+    </div>
+  </div>
+  <div class="zoom" role="group" aria-label="เครื่องมือผัง">
+    <button id="z-out" title="ย่อ (Ctrl/⌘ -)" aria-label="ย่อ">−</button>
+    <span class="hint" id="z-now">100%</span>
+    <button id="z-in" title="ขยาย (Ctrl/⌘ +)" aria-label="ขยาย">+</button>
+    <button data-z="fit" aria-pressed="true">พอดีจอ</button>
+    <button data-z="1" title="ขนาดจริง (Ctrl/⌘ 0)">100%</button>
+    <span class="sep"></span>
+    <button id="ed-undo" disabled title="ย้อน (Ctrl/⌘ Z)">↶ ย้อน</button>
+    <button id="ed-redo" disabled title="ทำซ้ำ (Ctrl/⌘ ⇧ Z)">↷ ทำซ้ำ</button>
+    <button id="ed-reset" disabled title="คืนตำแหน่งที่สคริปต์คำนวณไว้">คืนตำแหน่งเดิม</button>
+    <span class="sep"></span>
+    <button id="ed-save" title="เก็บที่แก้ไว้ในเครื่อง (Ctrl/⌘ S)">💾 บันทึก</button>
+    <button id="ed-drop" hidden title="ลบสิ่งที่บันทึกไว้ในเครื่อง">ล้างที่บันทึก</button>
+    <span class="hint" id="ed-saved" hidden></span>
+    <span class="sep"></span>
+    <span class="hint">canvas {W}×{H}px · ลากกล่องหรือลากเส้นเพื่อจัดสายตา
+      <kbd>Ctrl/⌘ Z</kbd> <kbd>Ctrl/⌘ +</kbd> <kbd>Ctrl/⌘ -</kbd> <kbd>Ctrl/⌘ 0</kbd></span>
+    <span class="hint dirty-note" id="ed-dirty" hidden>ตำแหน่งถูกเลื่อนด้วยมือแล้ว —
+      อยู่แค่ในหน้านี้ ไม่ได้แก้ .flow และไม่เปลี่ยนผลตรวจ G1–G9</span>
+    <div class="ed-ch" id="ed-ch" hidden>
+      <b style="color:var(--ink)">เส้นที่ถูกย้ายปลาย</b>
+      <span id="ed-ch-list"></span>
+      <button id="ed-ch-copy">คัดลอกเป็นบรรทัด .flow</button>
+      <button id="ed-ch-dl">ดาวน์โหลด .flow ที่แก้แล้ว</button>
+      <span>ย้ายปลายเส้น = เปลี่ยนความหมายของ flow — ต้องเอาไปแก้ใน .flow แล้ว render ใหม่</span>
     </div>
   </div>
   {legend}
