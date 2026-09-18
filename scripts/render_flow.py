@@ -653,6 +653,16 @@ def esc(s):
     return (s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
+# data-* มีไว้ให้ตัวแก้ผังใน .html เท่านั้น — .svg/.png ที่ส่งต่อให้ Figma/dev
+# ต้องสะอาดเหมือนเดิม จึงถอดออกก่อนเขียนไฟล์ภาพ
+DATA_ATTR_RE = re.compile(
+    r'\s(?:data-(?:e|from|to|op|pts|dist|lw|id|kind|x|y|w|h))="[^"]*"')
+
+
+def plain(frag):
+    return DATA_ATTR_RE.sub("", frag)
+
+
 def node_svg(n):
     x, y, w, h = n["x"], n["y"], n["w"], n["h"]
     shape = SHAPE[n["kind"]]
@@ -682,7 +692,10 @@ def node_svg(n):
         out.append(f'<text class="{cls}" x="{n["cx"]:.1f}" y="{top + i*LINE_H:.1f}" '
                    f'font-size="{fs}">{esc(l)}</text>')
     inner = "\n      ".join(out)
-    return (f'<g id="n-{esc(n["id"])}" class="node">\n      '
+    # data-* คือสิ่งที่ตัวแก้ผังใน .html ใช้ — ไม่มีผลกับ .svg/.png ที่ส่งต่อ
+    return (f'<g id="n-{esc(n["id"])}" class="node" data-id="{esc(n["id"])}" '
+            f'data-kind="{shape}" data-x="{x:.1f}" data-y="{y:.1f}" '
+            f'data-w="{w:.1f}" data-h="{h:.1f}">\n      '
             f'{inner}\n    </g>')
 
 
@@ -703,7 +716,7 @@ def render(src, out_path=None, title=None, tokens=None):
     checks = []
     edge_svg, label_svg, meta_edges = [], [], []
 
-    for e in edges:
+    for ei, e in enumerate(edges):
         s, t = nodes[e["src"]], nodes[e["dst"]]
         sa, ss = pick_anchor(s, e["type"], OUT_PREF, used, "out")
         if SHAPE[t["kind"]] == "diamond" and STYLE[e["type"]] == "solid":
@@ -718,17 +731,26 @@ def render(src, out_path=None, title=None, tokens=None):
         cls = {EDGE_SOLID: "e-solid", EDGE_BACK: "e-back", EDGE_YES: "e-solid",
                EDGE_NO: "e-solid", EDGE_PERM: "e-perm"}[e["type"]]
         marker = "arw-perm" if e["type"] == EDGE_PERM else "arw"
+        raw = " ".join(f"{px:.1f},{py:.1f}" for px, py in pts)
+        op = {EDGE_SOLID: "->", EDGE_BACK: "..>", EDGE_YES: "-Yes->",
+              EDGE_NO: "-No->", EDGE_PERM: "~>"}[e["type"]]
         edge_svg.append(f'<path class="{cls}" marker-end="url(#{marker})" '
+                        f'data-e="{ei}" data-from="{esc(s["id"])}" '
+                        f'data-to="{esc(t["id"])}" data-op="{op}" data-pts="{raw}" '
                         f'd="{rounded_path(pts)}"/>')
         if e["type"] in (EDGE_SOLID, EDGE_BACK):
-            edge_svg.append(f'<circle class="e-dot" cx="{A[0]:.1f}" cy="{A[1]:.1f}" r="6"/>')
+            edge_svg.append(f'<circle class="e-dot" data-e="{ei}" '
+                            f'cx="{A[0]:.1f}" cy="{A[1]:.1f}" r="6"/>')
         lab = None
         if e["label"]:
             lx, ly = point_at(pts, min(spacing["label"], L * 0.6))
             lw = text_w(e["label"], FS_SUB) + 20
             kls = "l-yes" if e["type"] == EDGE_YES else ("l-no" if e["type"] == EDGE_NO else "l-neutral")
             label_svg.append(
-                f'<g class="edge-label"><rect x="{lx-lw/2:.1f}" y="{ly-15:.1f}" '
+                f'<g class="edge-label" data-e="{ei}" '
+                f'data-dist="{min(spacing["label"], L * 0.6):.1f}" '
+                f'data-lw="{lw:.1f}">'
+                f'<rect x="{lx-lw/2:.1f}" y="{ly-15:.1f}" '
                 f'width="{lw:.1f}" height="30" rx="8"/>'
                 f'<text class="{kls}" x="{lx:.1f}" y="{ly:.1f}" font-size="{FS_SUB}">'
                 f'{esc(e["label"])}</text></g>')
@@ -771,12 +793,13 @@ def render(src, out_path=None, title=None, tokens=None):
     # ทำก่อน HTML เพื่อให้ exports ที่ฝังใน .html ตรงกับ .meta.json
     alt = esc(flow_meta["flow"] or "User Flow")
     tok = {f"t_{k}": v for k, v in TOKENS.items()}
-    body = "\n".join(edge_svg) + "\n" + svg_nodes + "\n" + "\n".join(label_svg)
+    body = plain("\n".join(edge_svg) + "\n" + svg_nodes + "\n" + "\n".join(label_svg))
     svg_path = stem + ".svg"
     with open(svg_path, "w", encoding="utf-8") as fh:
         fh.write(SVG_TMPL.format(W=round(W), H=round(H), alt=alt,
-                                 edges="\n".join(edge_svg), nodes=svg_nodes,
-                                 labels="\n".join(label_svg), **tok))
+                                 edges=plain("\n".join(edge_svg)),
+                                 nodes=plain(svg_nodes),
+                                 labels=plain("\n".join(label_svg)), **tok))
 
     # .png ต้องผ่านผืนจัตุรัสก่อน เพราะ qlmanage คืนรูปจัตุรัสเสมอ (ดู write_png)
     side = max(round(W), round(H))
@@ -799,7 +822,14 @@ def render(src, out_path=None, title=None, tokens=None):
         note=esc(meta["NOTE"]),
         W=round(W), H=round(H), legend=legend, ledger=ledger, report=report,
         edges="\n    ".join(edge_svg), labels="\n    ".join(label_svg),
-        nodes=svg_nodes, meta=json.dumps(flow_meta, ensure_ascii=False, indent=1),
+        nodes=svg_nodes, editor_js=EDITOR_JS,
+        # ต้นฉบับ .flow ฝังไว้ให้หน้าเว็บสร้างไฟล์ที่แก้แล้วให้ดาวน์โหลดได้
+        # "</" ถูก escape กัน string ไปปิดแท็ก <script> เอง
+        src_json=json.dumps(
+            open(src, encoding="utf-8").read(), ensure_ascii=False
+        ).replace("</", "<\\/"),
+        src_name=esc(os.path.basename(src)),
+        meta=json.dumps(flow_meta, ensure_ascii=False, indent=1),
         counts=f"{len([n for n in order if not n.endswith('__perm')])} กล่อง · "
                f"{len([e for e in edges if e['type'] != EDGE_PERM])} เส้น",
         **tok)
@@ -1014,8 +1044,12 @@ def build_ledger(flow_meta):
 
 
 LEGEND_HTML = """
-      <div class="lg">
-        <div class="lg-t">Tools in Flow</div>
+      <div class="lg" id="lg">
+        <button type="button" class="lg-t" id="lg-toggle" aria-expanded="true"
+          aria-controls="lg-body"><span>Tools in Flow</span><span class="lg-caret" aria-hidden="true">▾</span></button>
+        <div class="lg-b" id="lg-body">
+        <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><rect x="2" y="3" width="50" height="20" rx="10" fill="var(--primary)"/></svg><span>วงรี — จุดเริ่มต้นและจุดสิ้นสุด</span></div>
+        <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><rect x="2" y="3" width="50" height="20" rx="4" fill="var(--primary)"/></svg><span>สี่เหลี่ยมผืนผ้า — Process การกระทำหรือขั้นตอน (ใช้บ่อยที่สุด)</span></div>
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><path d="M27 2 L52 13 L27 24 L2 13 Z" fill="var(--primary)"/></svg><span>Diamond Condition — จบประโยคด้วย “ใช่หรือไม่?”</span></div>
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><rect x="2" y="5" width="50" height="16" rx="8" fill="var(--primary)"/></svg><span>Link To Flow</span></div>
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><circle cx="6" cy="13" r="4" fill="var(--primary)"/><path d="M10 13 H44" stroke="var(--primary)" stroke-width="3"/><path d="M42 7 l8 6 -8 6" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>เส้นปกติ — กดแล้วไปหน้าบันทึก และไปต่อ</span></div>
@@ -1023,7 +1057,928 @@ LEGEND_HTML = """
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><path d="M2 13 H10" stroke="var(--primary)" stroke-width="3"/><text x="14" y="17" font-size="10" fill="var(--yes)" font-weight="700">Yes</text><path d="M34 13 H44" stroke="var(--primary)" stroke-width="3"/><path d="M42 7 l8 6 -8 6" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>ทางออก Diamond: Yes</span></div>
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><path d="M2 13 H10" stroke="var(--primary)" stroke-width="3"/><text x="15" y="17" font-size="10" fill="var(--no)" font-weight="700">No</text><path d="M34 13 H44" stroke="var(--primary)" stroke-width="3"/><path d="M42 7 l8 6 -8 6" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>ทางออก Diamond: No</span></div>
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><path d="M2 13 H50" stroke="var(--perm)" stroke-width="4" stroke-dasharray="9 7" stroke-linecap="round"/></svg><span>หน้านั้น ๆ มี Permutation (Edge Case)</span></div>
+        </div>
       </div>"""
+
+
+# ── ตัวแก้ผังในหน้า (ย่อ/ขยาย · ลากกล่อง · ลากเส้น · ย้อน) ──────────────
+# ส่งเข้า HTML_TMPL เป็น "ค่า" ไม่ใช่ส่วนของ template — วงเล็บปีกกาจึงเขียนปกติ
+# ไม่ต้อง escape · แก้ที่นี่ที่เดียว ไม่มี JS ซ่อนอยู่ที่อื่น
+#
+# ขอบเขตโดยตั้งใจ: การลากในหน้านี้ "ไม่" เขียนกลับลง .flow และไม่เปลี่ยน
+# .meta.json — geometry ที่ใช้ตรวจ G1–G9 ยังมาจาก render_flow.py ที่เดียว
+# (flow-rules.md §3) หน้านี้จึงมีปุ่มคืนตำแหน่งเดิมเสมอ
+EDITOR_JS = r"""
+(function () {
+  var svg = document.querySelector('svg.flow');
+  var zw = document.getElementById('zw');
+  if (!svg || !zw) return;
+  var wrap = zw.parentElement;
+  var vb = (svg.getAttribute('viewBox') || '0 0 1000 1000').trim().split(/\s+/).map(Number);
+  var W = vb[2], H = vb[3];
+  var ELBOW = 16, MINK = 0.05, MAXK = 4;
+
+  // ── ย่อ/ขยาย ────────────────────────────────────────────────────────
+  var scale = null;                       // null = พอดีจอ
+  function fitK() { return Math.min(1, (wrap.clientWidth - 24) / W); }
+  function k() { return scale === null ? fitK() : scale; }
+  function paintZoom() {
+    var v = k();
+    zw.style.transform = 'scale(' + v + ')';
+    zw.style.height = (H * v) + 'px';
+    var now = document.getElementById('z-now');
+    if (now) now.textContent = Math.round(v * 100) + '%';
+    document.querySelectorAll('.zoom button[data-z]').forEach(function (b) {
+      var on = b.dataset.z === 'fit' ? scale === null : parseFloat(b.dataset.z) === scale;
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+  function setScale(v) { scale = Math.max(MINK, Math.min(MAXK, v)); paintZoom(); }
+  function step(f) { setScale(k() * f); }
+  document.querySelectorAll('.zoom button[data-z]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      scale = b.dataset.z === 'fit' ? null : parseFloat(b.dataset.z);
+      paintZoom();
+    });
+  });
+  var zi = document.getElementById('z-in'), zo = document.getElementById('z-out');
+  if (zi) zi.addEventListener('click', function () { step(1.25); });
+  if (zo) zo.addEventListener('click', function () { step(0.8); });
+  addEventListener('resize', function () { if (scale === null) paintZoom(); });
+
+  // ── Tools in Flow ปิด/เปิดได้ จำไว้ในเครื่อง ─────────────────────────
+  var lgBtn = document.getElementById('lg-toggle');
+  if (lgBtn) {
+    var LKEY = 'flowlegend';
+    try {
+      if (localStorage.getItem(LKEY) === 'closed') lgBtn.setAttribute('aria-expanded', 'false');
+    } catch (e) {}
+    lgBtn.addEventListener('click', function () {
+      var open = lgBtn.getAttribute('aria-expanded') !== 'true';
+      lgBtn.setAttribute('aria-expanded', String(open));
+      try { localStorage.setItem(LKEY, open ? 'open' : 'closed'); } catch (e) {}
+    });
+  }
+
+  // ── โมเดลของผัง ─────────────────────────────────────────────────────
+  var nodeEls = {}, off = {};             // off[id] = [dx, dy]
+  [].forEach.call(svg.querySelectorAll('g.node'), function (g) {
+    var id = g.dataset.id;
+    if (!id) return;
+    nodeEls[id] = g;
+    off[id] = [0, 0];
+  });
+
+  var E = [];                             // E[i] = {path, hit, dot, label, pts, from, to}
+  [].forEach.call(svg.querySelectorAll('path[data-e]'), function (p) {
+    var i = +p.dataset.e;
+    E[i] = {
+      path: p, from: p.dataset.from, to: p.dataset.to,
+      of: p.dataset.from, ot: p.dataset.to, op: p.dataset.op || '->',
+      shaped: false,                      // true เมื่อคนจัดรูปเส้นนี้ด้วยมือแล้ว
+      pts: (p.dataset.pts || '').split(' ').filter(Boolean).map(function (s) {
+        var a = s.split(','); return [+a[0], +a[1]];
+      }),
+      dot: svg.querySelector('circle.e-dot[data-e="' + i + '"]'),
+      label: svg.querySelector('g.edge-label[data-e="' + i + '"]')
+    };
+    var hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    hit.setAttribute('class', 'e-hit');
+    hit.dataset.e = String(i);
+    hit.setAttribute('d', p.getAttribute('d'));
+    p.parentNode.insertBefore(hit, p);
+    E[i].hit = hit;
+  });
+
+  function clonePts(ps) { return ps.map(function (q) { return [q[0], q[1]]; }); }
+
+  // เก็บกวาดจุดก่อนวาดเสมอ — จุดซ้ำ จุดที่อยู่แนวเดียวกัน และการ "ย้อนกลับ"
+  // บนแกนเดิม ถ้าปล่อยไว้ ตัวลบมุมจะวาดส่วนโค้ง 180° กลายเป็นวงกลมโป่งกลางเส้น
+  function tidy(ps) {
+    var p = clonePts(ps), moved = true;
+    while (moved && p.length > 2) {
+      moved = false;
+      for (var i = 1; i < p.length - 1; i++) {
+        var a = p[i - 1], b = p[i], c = p[i + 1];
+        var same = Math.abs(a[0] - b[0]) < 0.5 && Math.abs(a[1] - b[1]) < 0.5;
+        var cross = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+        if (same || Math.abs(cross) < 0.5) {   // ซ้ำ · ตรงต่อกัน · หรือย้อนกลับ
+          p.splice(i, 1);
+          moved = true;
+          break;
+        }
+      }
+    }
+    return p;
+  }
+
+  // ── กล่อง: กรอบปัจจุบัน · จุดเกาะ 4 ด้าน · หากล่องใต้เมาส์ ────────────
+  function rectOf(id) {
+    var g = nodeEls[id], o = off[id] || [0, 0];
+    return { x: +g.dataset.x + o[0], y: +g.dataset.y + o[1],
+             w: +g.dataset.w, h: +g.dataset.h };
+  }
+  // จุดเกาะ: กล่องสี่เหลี่ยมมี 3 ช่องต่อด้าน (25/50/75%) เส้นหลายเส้นจะได้
+  // ไม่กระจุกจุดเดียว · ข้าวหลามตัดมีช่องเดียวคือปลายแหลม เพราะ 25/75 ของ
+  // กรอบจะไปตกในมุมที่ไม่มีรูปทรงอยู่จริง (และ G6 ให้เส้นทึบรวมที่ปลายซ้ายอยู่แล้ว)
+  function slots(id, side) {
+    var r = rectOf(id);
+    var dia = nodeEls[id].dataset.kind === 'diamond';
+    var ts = dia ? [0.5] : [0.25, 0.5, 0.75];
+    return ts.map(function (t) {
+      if (side === 'L') return [r.x, r.y + r.h * t];
+      if (side === 'R') return [r.x + r.w, r.y + r.h * t];
+      if (side === 'T') return [r.x + r.w * t, r.y];
+      return [r.x + r.w * t, r.y + r.h];
+    });
+  }
+  function anchors(id) {
+    var out = [];
+    ['L', 'R', 'T', 'B'].forEach(function (d) {
+      slots(id, d).forEach(function (p) { out.push({ p: p, d: d }); });
+    });
+    return out;
+  }
+  // จุดปลายเส้นอื่น ๆ ที่เกาะกล่องนี้อยู่แล้ว — ใช้เลี่ยงไม่ให้ทับกัน
+  function takenOn(id, exceptI) {
+    var out = [];
+    for (var i = 0; i < E.length; i++) {
+      if (i === exceptI || !E[i]) continue;
+      var e = E[i], p = e.pts;
+      if (e.from === id) out.push(p[0]);
+      if (e.to === id) out.push(p[p.length - 1]);
+    }
+    return out;
+  }
+  function nodeAt(x, y) {
+    var hitId = null;
+    Object.keys(nodeEls).forEach(function (id) {
+      var r = rectOf(id);
+      if (x >= r.x - 10 && x <= r.x + r.w + 10 &&
+          y >= r.y - 10 && y <= r.y + r.h + 10) hitId = id;
+    });
+    return hitId;
+  }
+  function nearestAnchor(id, x, y) {
+    var best = null, bd = Infinity;
+    anchors(id).forEach(function (a) {
+      var d = Math.hypot(a.p[0] - x, a.p[1] - y);
+      if (d < bd) { bd = d; best = a; }
+    });
+    return best;
+  }
+
+  // ── เดินเส้นใหม่แบบมุมฉาก เมื่อปลายเส้นย้ายไปเกาะจุดอื่น ─────────────
+  var STUB = 60;
+  function isH(d) { return d === 'L' || d === 'R'; }
+  function stubOf(a, d) {
+    return d === 'L' ? [a[0] - STUB, a[1]] : d === 'R' ? [a[0] + STUB, a[1]] :
+           d === 'T' ? [a[0], a[1] - STUB] : [a[0], a[1] + STUB];
+  }
+  function dirAt(ps, head) {
+    var a = head ? ps[0] : ps[ps.length - 1];
+    var b = head ? ps[1] : ps[ps.length - 2];
+    if (Math.abs(b[0] - a[0]) >= Math.abs(b[1] - a[1])) return b[0] > a[0] ? 'R' : 'L';
+    return b[1] > a[1] ? 'B' : 'T';
+  }
+  // เลือกด้านที่เส้นควรออก-เข้า จากตำแหน่งจริงของสองกล่องในขณะนั้น
+  // ไล่ซ้าย→ขวาเป็นหลักตาม F-01 ถ้าเยื้องกันแนวตั้งมากกว่าค่อยใช้บน-ล่าง
+  function bestPair(ra, rb) {
+    var dx = (rb.x + rb.w / 2) - (ra.x + ra.w / 2);
+    var dy = (rb.y + rb.h / 2) - (ra.y + ra.h / 2);
+    if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? ['R', 'L'] : ['L', 'R'];
+    return dy >= 0 ? ['B', 'T'] : ['T', 'B'];
+  }
+  function pickAnchor(id, side, exceptI) {
+    var cand = slots(id, side), used = takenOn(id, exceptI), best = null, bs = -1;
+    cand.forEach(function (p) {
+      var far = 1e9;
+      used.forEach(function (u) {
+        far = Math.min(far, Math.hypot(u[0] - p[0], u[1] - p[1]));
+      });
+      if (far > bs) { bs = far; best = p; }     // เลือกช่องที่ห่างของเดิมที่สุด
+    });
+    return best ? { p: best, d: side } : null;
+  }
+
+  // ── หาเลนว่าง: ถ้าแนวที่จะใช้มีเส้นอื่นจองอยู่แล้ว เลื่อนออกทีละ 60 ─────
+  function lanesUsed(exceptI, vertical) {
+    var out = [];
+    for (var i = 0; i < E.length; i++) {
+      if (i === exceptI || !E[i]) continue;
+      var p = E[i].pts;
+      for (var j = 0; j < p.length - 1; j++) {
+        var a = p[j], b = p[j + 1];
+        if (vertical && Math.abs(a[0] - b[0]) < 0.5 && Math.abs(a[1] - b[1]) > 1) out.push(a[0]);
+        if (!vertical && Math.abs(a[1] - b[1]) < 0.5 && Math.abs(a[0] - b[0]) > 1) out.push(a[1]);
+      }
+    }
+    return out;
+  }
+  function freeLane(v, used) {
+    function busy(t) {
+      for (var i = 0; i < used.length; i++) if (Math.abs(used[i] - t) < 40) return true;
+      return false;
+    }
+    if (!busy(v)) return v;
+    for (var n = 1; n <= 8; n++) {
+      if (!busy(v + n * 60)) return v + n * 60;
+      if (!busy(v - n * 60)) return v - n * 60;
+    }
+    return v;
+  }
+  // เดินเส้นใหม่ทั้งเส้นให้สั้นและตรงที่สุดระหว่างสองกล่อง ณ ตำแหน่งปัจจุบัน
+  function autoRoute(i) {
+    var e = E[i];
+    if (!e || e.from === e.to) return false;
+    var pair = bestPair(rectOf(e.from), rectOf(e.to));
+    var A = pickAnchor(e.from, pair[0], i), B = pickAnchor(e.to, pair[1], i);
+    if (!A || !B) return false;
+    e.pts = tidy(reroute(A.p, A.d, B.p, B.d, i));
+    return true;
+  }
+
+  function reroute(A, dA, B, dB, exceptI) {
+    var a1 = stubOf(A, dA), b1 = stubOf(B, dB), mid;
+    var ex = exceptI === undefined ? -1 : exceptI;
+    if (isH(dA) && isH(dB)) {
+      var mx = freeLane((a1[0] + b1[0]) / 2, lanesUsed(ex, true));
+      mid = [[mx, a1[1]], [mx, b1[1]]];
+    } else if (!isH(dA) && !isH(dB)) {
+      var my = freeLane((a1[1] + b1[1]) / 2, lanesUsed(ex, false));
+      mid = [[a1[0], my], [b1[0], my]];
+    } else if (isH(dA)) { mid = [[b1[0], a1[1]]]; }
+    else { mid = [[a1[0], b1[1]]]; }
+    var raw = [A, a1].concat(mid, [b1, B]), out = [raw[0]];
+    for (var i = 1; i < raw.length; i++) {
+      var q = raw[i], l = out[out.length - 1];
+      if (Math.abs(q[0] - l[0]) < 0.5 && Math.abs(q[1] - l[1]) < 0.5) continue;
+      out.push(q);
+    }
+    return out;
+  }
+
+  function roundedPath(ps, r) {
+    var d = ['M ' + ps[0][0].toFixed(1) + ' ' + ps[0][1].toFixed(1)];
+    for (var i = 1; i < ps.length - 1; i++) {
+      var p0 = ps[i - 1], p1 = ps[i], p2 = ps[i + 1];
+      var d0 = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+      var d1 = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+      var r1 = Math.min(r, d0 / 2, d1 / 2);
+      if (!(r1 > 0.1)) continue;
+      var v0 = [p1[0] - p0[0], p1[1] - p0[1]], v1 = [p2[0] - p1[0], p2[1] - p1[1]];
+      var n0 = d0 || 1, n1 = d1 || 1;
+      var a = [p1[0] - v0[0] / n0 * r1, p1[1] - v0[1] / n0 * r1];
+      var b = [p1[0] + v1[0] / n1 * r1, p1[1] + v1[1] / n1 * r1];
+      var sweep = (v0[0] * v1[1] - v0[1] * v1[0]) > 0 ? 1 : 0;
+      d.push('L ' + a[0].toFixed(1) + ' ' + a[1].toFixed(1));
+      d.push('A ' + r1.toFixed(1) + ' ' + r1.toFixed(1) + ' 0 0 ' + sweep +
+             ' ' + b[0].toFixed(1) + ' ' + b[1].toFixed(1));
+    }
+    var last = ps[ps.length - 1];
+    d.push('L ' + last[0].toFixed(1) + ' ' + last[1].toFixed(1));
+    return d.join(' ');
+  }
+
+  function pointAt(ps, dist) {
+    var left = dist;
+    for (var i = 0; i < ps.length - 1; i++) {
+      var a = ps[i], b = ps[i + 1];
+      var L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (left <= L || i === ps.length - 2) {
+        var t = L ? left / L : 0;
+        t = Math.max(0, Math.min(1, t));
+        return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+      }
+      left -= L;
+    }
+    return ps[0];
+  }
+
+  function drawEdge(i) {
+    var e = E[i];
+    if (!e) return;
+    e.pts = tidy(e.pts);
+    var d = roundedPath(e.pts, ELBOW);
+    e.path.setAttribute('d', d);
+    e.hit.setAttribute('d', d);
+    if (e.dot) {
+      e.dot.setAttribute('cx', e.pts[0][0].toFixed(1));
+      e.dot.setAttribute('cy', e.pts[0][1].toFixed(1));
+    }
+    if (e.label) {
+      var pos = pointAt(e.pts, +e.label.dataset.dist || 0);
+      var lw = +e.label.dataset.lw || 40;
+      var rect = e.label.querySelector('rect'), txt = e.label.querySelector('text');
+      if (rect) {
+        rect.setAttribute('x', (pos[0] - lw / 2).toFixed(1));
+        rect.setAttribute('y', (pos[1] - 15).toFixed(1));
+      }
+      if (txt) {
+        txt.setAttribute('x', pos[0].toFixed(1));
+        txt.setAttribute('y', pos[1].toFixed(1));
+      }
+    }
+  }
+
+  // ── จุดจับปลายเส้น — โผล่เมื่อเมาส์อยู่บนเส้น ลากไปเกาะกล่องอื่นได้ ──
+  var NS = 'http://www.w3.org/2000/svg';
+  function mkCircle() {
+    var c = document.createElementNS(NS, 'circle');
+    c.setAttribute('class', 'e-h');
+    c.setAttribute('r', '11');
+    c.setAttribute('hidden', '');
+    svg.appendChild(c);
+    return c;
+  }
+  var hA = mkCircle(), hB = mkCircle();
+  hA.dataset.end = 'head'; hB.dataset.end = 'tail';
+  var bends = [];                         // จุดจับข้อศอก สร้างเท่าที่ต้องใช้
+  function mkBend() {
+    var r = document.createElementNS(NS, 'rect');
+    r.setAttribute('class', 'e-b');
+    r.setAttribute('width', '20'); r.setAttribute('height', '20');
+    r.setAttribute('rx', '4');
+    r.setAttribute('hidden', '');
+    svg.appendChild(r);
+    bends.push(r);
+    return r;
+  }
+  var hovE = -1;
+  function showHandles(i) {
+    if (!E[i]) return;
+    hovE = i;
+    var p = E[i].pts, z = p[p.length - 1];
+    hA.setAttribute('cx', p[0][0]); hA.setAttribute('cy', p[0][1]);
+    hB.setAttribute('cx', z[0]); hB.setAttribute('cy', z[1]);
+    hA.removeAttribute('hidden'); hB.removeAttribute('hidden');
+    for (var n = 0; n < Math.max(bends.length, p.length - 2); n++) {
+      var el = bends[n] || mkBend();
+      if (n < p.length - 2) {
+        el.setAttribute('x', p[n + 1][0] - 10);
+        el.setAttribute('y', p[n + 1][1] - 10);
+        el.dataset.idx = String(n + 1);
+        el.removeAttribute('hidden');
+      } else el.setAttribute('hidden', '');
+    }
+  }
+  function hideHandles() {
+    hovE = -1;
+    hA.setAttribute('hidden', ''); hB.setAttribute('hidden', '');
+    bends.forEach(function (b) { b.setAttribute('hidden', ''); });
+  }
+  // แทรกข้อศอกใหม่ตรงจุดที่คลิก / ลบข้อศอกที่ไม่ต้องการ
+  function addBend(i, x, y) {
+    var e = E[i], seg = nearestSeg(e.pts, x, y);
+    e.pts = clonePts(e.pts);
+    e.pts.splice(seg + 1, 0, [x, y]);
+    e.pts = orthFix(e.pts);
+    e.shaped = true;
+  }
+  function delBend(i, idx) {
+    var e = E[i];
+    if (idx <= 0 || idx >= e.pts.length - 1) return false;
+    var p = clonePts(e.pts);
+    p.splice(idx, 1);
+    e.pts = tidy(orthFix(p));
+    e.shaped = true;
+    return true;
+  }
+
+  function paintChanges() {
+    var box = document.getElementById('ed-ch');
+    if (!box) return;
+    var rows = [];
+    for (var i = 0; i < E.length; i++) {
+      var e = E[i];
+      if (e && (e.from !== e.of || e.to !== e.ot)) rows.push(e);
+    }
+    box.hidden = !rows.length;
+    var list = document.getElementById('ed-ch-list');
+    if (!list) return;
+    list.textContent = '';
+    rows.forEach(function (e, n) {
+      if (n) list.appendChild(document.createTextNode(' · '));
+      var a = document.createElement('code'), b = document.createElement('code');
+      a.textContent = e.of + ' ' + e.op + ' ' + e.ot;
+      b.textContent = e.from + ' ' + e.op + ' ' + e.to;
+      list.appendChild(a);
+      list.appendChild(document.createTextNode(' → '));
+      list.appendChild(b);
+    });
+    box.dataset.txt = rows.map(function (e) {
+      return e.from + ' ' + e.op + ' ' + e.to + '   # เดิม ' + e.of + ' ' + e.op + ' ' + e.ot;
+    }).join('\n');
+  }
+  var bCopy = document.getElementById('ed-ch-copy');
+  if (bCopy) bCopy.addEventListener('click', function () {
+    var t = (document.getElementById('ed-ch').dataset.txt || '');
+    if (navigator.clipboard) navigator.clipboard.writeText(t);
+    bCopy.textContent = 'คัดลอกแล้ว';
+    setTimeout(function () { bCopy.textContent = 'คัดลอกเป็นบรรทัด .flow'; }, 1500);
+  });
+
+  // ── เตือนเมื่อเส้นทะลุกล่อง (G3) — เช็คสด ไม่ต้องรอ self_check ──────
+  function segHitsBox(a, b, r) {
+    var pad = 4;
+    var x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]);
+    var y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
+    return x1 > r.x + pad && x0 < r.x + r.w - pad &&
+           y1 > r.y + pad && y0 < r.y + r.h - pad;
+  }
+  function crossCount() {
+    var bad = [];
+    for (var i = 0; i < E.length; i++) {
+      var e = E[i];
+      if (!e) continue;
+      var hit = false;
+      Object.keys(nodeEls).forEach(function (id) {
+        if (hit || id === e.from || id === e.to) return;
+        var r = rectOf(id);
+        for (var j = 0; j < e.pts.length - 1; j++) {
+          if (segHitsBox(e.pts[j], e.pts[j + 1], r)) { hit = true; return; }
+        }
+      });
+      if (hit) bad.push(i);
+    }
+    return bad;
+  }
+  var crossEl = document.getElementById('ed-cross');
+  var bad = [];
+  function paintCross() {
+    bad = crossCount();
+    if (!crossEl) return;
+    crossEl.hidden = !bad.length;
+    crossEl.textContent = bad.length ? '⚠ เส้นทะลุกล่อง ' + bad.length + ' เส้น (คลิกเพื่อไฮไลต์)' : '';
+  }
+  if (crossEl) crossEl.addEventListener('click', function () {
+    bad.forEach(function (i) {
+      E[i].path.classList.add('e-flag');
+      setTimeout(function () { E[i].path.classList.remove('e-flag'); }, 1600);
+    });
+  });
+
+  function draw() {
+    Object.keys(off).forEach(function (id) {
+      var o = off[id];
+      if (o[0] || o[1]) nodeEls[id].setAttribute('transform', 'translate(' + o[0] + ',' + o[1] + ')');
+      else nodeEls[id].removeAttribute('transform');
+    });
+    for (var i = 0; i < E.length; i++) drawEdge(i);
+    paintCross();
+  }
+
+  // ── เลื่อนกล่อง: ปลายเส้นตามไปด้วย และยังตั้งฉากเหมือนเดิม ───────────
+  function expand(ps) {                   // เส้นตรง 2 จุด → 4 จุด จะได้พับได้
+    if (ps.length !== 2) return ps;
+    var a = ps[0], b = ps[1];
+    if (Math.abs(a[1] - b[1]) <= Math.abs(a[0] - b[0])) {
+      var mx = (a[0] + b[0]) / 2;
+      return [a, [mx, a[1]], [mx, b[1]], b];
+    }
+    var my = (a[1] + b[1]) / 2;
+    return [a, [a[0], my], [b[0], my], b];
+  }
+
+  // ── เส้นที่คนจัดเองแล้ว: ยืดทั้งเส้นตามสัดส่วน ไม่เดินเส้นใหม่ทับของเขา ──
+  // สเกลทีละแกนโดยตรึงปลายที่ไม่ได้ขยับไว้ — เส้นแนวตั้ง/แนวนอนยังตั้งฉากเหมือนเดิม
+  function orthFix(ps) {
+    var p = [ps[0]];
+    for (var i = 1; i < ps.length; i++) {
+      var a = p[p.length - 1], b = ps[i];
+      if (Math.abs(a[0] - b[0]) > 0.5 && Math.abs(a[1] - b[1]) > 0.5) {
+        p.push([a[0], b[1]]);             // ช่วงที่กลายเป็นเฉียง แทรกข้อศอกคืน
+      }
+      p.push([b[0], b[1]]);
+    }
+    return p;
+  }
+  function stretch(base, head, dx, dy) {
+    var p = clonePts(base), n = p.length;
+    var mv = head ? 0 : n - 1, fx = head ? n - 1 : 0;
+    [0, 1].forEach(function (ax) {
+      var d = ax === 0 ? dx : dy;
+      var m0 = base[mv][ax], f0 = base[fx][ax];
+      if (Math.abs(m0 - f0) >= 1) {       // สเกลรอบปลายที่ตรึงไว้
+        var k = (m0 + d - f0) / (m0 - f0);
+        for (var i = 0; i < n; i++) p[i][ax] = f0 + (base[i][ax] - f0) * k;
+      } else {                            // ปลายสองข้างอยู่แนวเดียวกัน สเกลไม่ได้
+        for (var j = 0; j < n; j++) if (j !== fx) p[j][ax] = base[j][ax] + d;
+      }
+    });
+    return tidy(orthFix(p));
+  }
+
+  function moveEnd(ps, head, dx, dy) {
+    var p = expand(clonePts(ps)), n = p.length;
+    if (head) {
+      var a = p[0], b = p[1];
+      var horiz = Math.abs(a[1] - b[1]) <= Math.abs(a[0] - b[0]);
+      p[0] = [a[0] + dx, a[1] + dy];
+      p[1] = horiz ? [b[0], p[0][1]] : [p[0][0], b[1]];
+    } else {
+      var z = p[n - 1], y = p[n - 2];
+      var horiz2 = Math.abs(z[1] - y[1]) <= Math.abs(z[0] - y[0]);
+      p[n - 1] = [z[0] + dx, z[1] + dy];
+      p[n - 2] = horiz2 ? [y[0], p[n - 1][1]] : [p[n - 1][0], y[1]];
+    }
+    return p;
+  }
+
+  // ── ลากเส้น: เลื่อนช่วงหนึ่งของเส้นตั้งฉาก ปลายยังเกาะกล่องเดิม ──────
+  function nearestSeg(ps, x, y) {
+    var best = 0, bd = Infinity;
+    for (var i = 0; i < ps.length - 1; i++) {
+      var a = ps[i], b = ps[i + 1];
+      var vx = b[0] - a[0], vy = b[1] - a[1], L2 = vx * vx + vy * vy;
+      var t = L2 ? Math.max(0, Math.min(1, ((x - a[0]) * vx + (y - a[1]) * vy) / L2)) : 0;
+      var d = Math.hypot(x - (a[0] + vx * t), y - (a[1] + vy * t));
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
+  }
+
+  function shiftSeg(base, i, dx, dy) {
+    var p = clonePts(base), n = p.length;
+    var a = p[i], b = p[i + 1];
+    var horiz = Math.abs(a[1] - b[1]) <= Math.abs(a[0] - b[0]);
+    if (horiz) { p[i][1] += dy; p[i + 1][1] += dy; }
+    else { p[i][0] += dx; p[i + 1][0] += dx; }
+    if (i + 1 === n - 1) p.push([base[n - 1][0], base[n - 1][1]]);
+    if (i === 0) p.unshift([base[0][0], base[0][1]]);
+    return p;
+  }
+
+  // ── ย้อน / ทำซ้ำ ────────────────────────────────────────────────────
+  var undo = [], redo = [];
+  function snap() {
+    return JSON.stringify({
+      o: off,
+      e: E.map(function (e) { return e ? { p: e.pts, f: e.from, t: e.to, s: e.shaped } : null; })
+    });
+  }
+  function restore(s) {
+    var d = JSON.parse(s);
+    off = d.o;
+    for (var i = 0; i < E.length; i++) {
+      if (!E[i] || !d.e[i]) continue;
+      E[i].pts = d.e[i].p;
+      E[i].from = d.e[i].f;
+      E[i].to = d.e[i].t;
+      E[i].shaped = !!d.e[i].s;
+      E[i].path.dataset.from = E[i].from;
+      E[i].path.dataset.to = E[i].to;
+    }
+    draw();
+    hideHandles();
+    paintChanges();
+    paintBtns();
+  }
+  var bUndo = document.getElementById('ed-undo'),
+      bRedo = document.getElementById('ed-redo'),
+      bReset = document.getElementById('ed-reset'),
+      dirty = document.getElementById('ed-dirty');
+  function paintBtns() {
+    if (bUndo) bUndo.disabled = !undo.length;
+    if (bRedo) bRedo.disabled = !redo.length;
+    if (bReset) bReset.disabled = !undo.length && !redo.length;
+    if (dirty) dirty.hidden = !undo.length;
+  }
+  function begin() { undo.push(snap()); redo = []; paintBtns(); }
+  function doUndo() {
+    if (!undo.length) return;
+    redo.push(snap());
+    restore(undo.pop());
+  }
+  function doRedo() {
+    if (!redo.length) return;
+    undo.push(snap());
+    restore(redo.pop());
+  }
+  if (bUndo) bUndo.addEventListener('click', doUndo);
+  if (bRedo) bRedo.addEventListener('click', doRedo);
+  var base0 = snap();
+  if (bReset) bReset.addEventListener('click', function () {
+    if (!undo.length && !redo.length) return;
+    begin();                     // คืนตำแหน่งเดิมก็ย้อนได้ ไม่ใช่ทางเดียว
+    restore(base0);
+  });
+
+  // ── จับการลาก ───────────────────────────────────────────────────────
+  var drag = null;
+  function svgPt(ev) {
+    var r = svg.getBoundingClientRect(), kk = k();
+    return [(ev.clientX - r.left) / kk, (ev.clientY - r.top) / kk];
+  }
+  svg.addEventListener('pointerdown', function (ev) {
+    var g = ev.target.closest ? ev.target.closest('g.node') : null;
+    var cls = ev.target.classList;
+    var hit = cls && cls.contains('e-hit') ? ev.target : null;
+    var bend = cls && cls.contains('e-b') ? ev.target : null;
+    if (bend && hovE >= 0) {
+      ev.preventDefault();
+      if (ev.altKey || ev.button === 2) {        // Alt/⌥ หรือคลิกขวา = ลบข้อศอก
+        begin();
+        if (delBend(hovE, +bend.dataset.idx)) { drawEdge(hovE); showHandles(hovE); }
+        else undo.pop();
+        paintCross(); paintBtns();
+        return;
+      }
+      begin();
+      drag = { kind: 'bend', i: hovE, idx: +bend.dataset.idx,
+               base: clonePts(E[hovE].pts) };
+      svg.setPointerCapture(ev.pointerId);
+      return;
+    }
+    if (hit && (ev.altKey || ev.button === 2)) {  // Alt/⌥ หรือคลิกขวาบนเส้น = แทรกข้อศอก
+      ev.preventDefault();
+      var q0 = svgPt(ev);
+      begin();
+      addBend(+hit.dataset.e, q0[0], q0[1]);
+      drawEdge(+hit.dataset.e);
+      showHandles(+hit.dataset.e);
+      paintCross(); paintBtns();
+      return;
+    }
+    var handle = cls && cls.contains('e-h') ? ev.target : null;
+    if (handle && hovE >= 0) {
+      ev.preventDefault();
+      begin();
+      drag = { kind: 'end', i: hovE, head: handle.dataset.end === 'head',
+               base: clonePts(E[hovE].pts), node: null, anchor: null };
+      svg.setPointerCapture(ev.pointerId);
+      return;
+    }
+    if (!g && !hit) return;
+    ev.preventDefault();
+    begin();
+    var kk = k();
+    if (g) {
+      var id = g.dataset.id;
+      drag = {
+        kind: 'node', id: id, x: ev.clientX, y: ev.clientY,
+        o: [off[id][0], off[id][1]],
+        edges: E.map(function (e, i) {
+          if (!e) return null;
+          if (e.from !== id && e.to !== id) return null;
+          return { i: i, head: e.from === id, base: clonePts(e.pts) };
+        }).filter(Boolean)
+      };
+      g.classList.add('dragging');
+    } else {
+      var i2 = +hit.dataset.e, e2 = E[i2];
+      var r = svg.getBoundingClientRect();
+      var sx = (ev.clientX - r.left) / kk, sy = (ev.clientY - r.top) / kk;
+      drag = { kind: 'edge', i: i2, x: ev.clientX, y: ev.clientY,
+               seg: nearestSeg(e2.pts, sx, sy), base: clonePts(e2.pts) };
+    }
+    svg.setPointerCapture(ev.pointerId);
+  });
+
+  svg.addEventListener('pointermove', function (ev) {
+    if (!drag) {                          // ไม่ได้ลากอยู่ — แค่โชว์จุดจับของเส้นที่ชี้อยู่
+      var c = ev.target.classList;
+      if (c && c.contains('e-hit')) showHandles(+ev.target.dataset.e);
+      else if (!c || (!c.contains('e-h') && !c.contains('e-b'))) hideHandles();
+      return;
+    }
+    if (drag.kind === 'bend') {
+      var q1 = svgPt(ev), e1 = E[drag.i], p1 = clonePts(drag.base), k1 = drag.idx;
+      var a1 = p1[k1 - 1], c1 = p1[k1 + 1];
+      var preH = Math.abs(a1[1] - p1[k1][1]) <= Math.abs(a1[0] - p1[k1][0]);
+      var nxtH = Math.abs(c1[1] - p1[k1][1]) <= Math.abs(c1[0] - p1[k1][0]);
+      p1[k1] = [q1[0], q1[1]];
+      if (preH) p1[k1 - 1] = [a1[0], q1[1]]; else p1[k1 - 1] = [q1[0], a1[1]];
+      if (nxtH) p1[k1 + 1] = [c1[0], q1[1]]; else p1[k1 + 1] = [q1[0], c1[1]];
+      if (k1 - 1 === 0) p1[0] = [drag.base[0][0], drag.base[0][1]];
+      if (k1 + 1 === p1.length - 1) p1[p1.length - 1] = clonePts(drag.base).pop();
+      e1.pts = orthFix(p1);
+      e1.shaped = true;
+      drawEdge(drag.i);
+      showHandles(drag.i);
+      return;
+    }
+    if (drag.kind === 'end') {
+      var q = svgPt(ev);
+      var id = nodeAt(q[0], q[1]);
+      document.querySelectorAll('g.node.target').forEach(function (o) {
+        o.classList.remove('target');
+      });
+      var e = E[drag.i];
+      if (id) {
+        nodeEls[id].classList.add('target');
+        var a = nearestAnchor(id, q[0], q[1]);
+        var other = drag.head ? drag.base[drag.base.length - 1] : drag.base[0];
+        var od = dirAt(drag.base, !drag.head);
+        e.pts = drag.head ? reroute(a.p, a.d, other, od) : reroute(other, od, a.p, a.d);
+        drag.node = id;
+        drag.anchor = a;
+      } else {                            // ปล่อยนอกกล่องไม่ได้ — เส้นต้องแตะกล่องเสมอ (F-20)
+        e.pts = clonePts(drag.base);
+        drag.node = null;
+      }
+      drawEdge(drag.i);
+      showHandles(drag.i);
+      return;
+    }
+    var kk = k();
+    var dx = (ev.clientX - drag.x) / kk, dy = (ev.clientY - drag.y) / kk;
+    if (drag.kind === 'node') {
+      off[drag.id] = [drag.o[0] + dx, drag.o[1] + dy];
+      drag.edges.forEach(function (m) {
+        // เส้นที่คนจัดเองแล้ว = ยืดตามสัดส่วน รักษารูปที่เขาวางไว้
+        // เส้นที่ยังไม่เคยแตะ = เดินใหม่เองให้สั้นที่สุด
+        if (E[m.i].shaped) E[m.i].pts = stretch(m.base, m.head, dx, dy);
+        else if (!autoRoute(m.i)) E[m.i].pts = moveEnd(m.base, m.head, dx, dy);
+        drawEdge(m.i);
+      });
+      var g2 = nodeEls[drag.id];
+      g2.setAttribute('transform', 'translate(' + off[drag.id][0] + ',' + off[drag.id][1] + ')');
+    } else {
+      E[drag.i].pts = shiftSeg(drag.base, drag.seg, dx, dy);
+      E[drag.i].shaped = true;
+      drawEdge(drag.i);
+    }
+  });
+
+  function endDrag(ev) {
+    if (!drag) return;
+    if (drag.kind === 'end') {
+      document.querySelectorAll('g.node.target').forEach(function (o) {
+        o.classList.remove('target');
+      });
+      var e = E[drag.i];
+      if (drag.node) {
+        if (drag.head) e.from = drag.node; else e.to = drag.node;
+        e.path.dataset.from = e.from;
+        e.path.dataset.to = e.to;
+      } else {
+        undo.pop();                       // ไม่ได้เปลี่ยนอะไร ไม่ต้องกินคิว undo
+      }
+      paintChanges();
+    }
+    var g3 = nodeEls[drag.id];
+    if (g3) g3.classList.remove('dragging');
+    if (ev && ev.pointerId !== undefined && svg.hasPointerCapture(ev.pointerId)) {
+      svg.releasePointerCapture(ev.pointerId);
+    }
+    drag = null;
+    paintCross();
+    paintBtns();
+  }
+  svg.addEventListener('contextmenu', function (ev) {
+    var c = ev.target.classList;
+    if (c && (c.contains('e-hit') || c.contains('e-b'))) ev.preventDefault();
+  });
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
+
+  // ── ดับเบิลคลิก = จัดเส้นให้สั้นและตรงที่สุด ────────────────────────
+  // ที่เส้น: จัดเส้นนั้น · ที่กล่อง: จัดทุกเส้นที่ต่อกับกล่องนั้น
+  svg.addEventListener('dblclick', function (ev) {
+    var cls = ev.target.classList;
+    var onEdge = cls && (cls.contains('e-hit') || cls.contains('e-h'));
+    var g = ev.target.closest ? ev.target.closest('g.node') : null;
+    var list = [];
+    if (onEdge) {
+      var i = cls.contains('e-h') ? hovE : +ev.target.dataset.e;
+      if (i >= 0) list = [i];
+    } else if (g) {
+      var id = g.dataset.id;
+      for (var n = 0; n < E.length; n++) {
+        if (E[n] && (E[n].from === id || E[n].to === id)) list.push(n);
+      }
+    }
+    if (!list.length) return;
+    ev.preventDefault();
+    begin();
+    var changed = false;
+    list.forEach(function (n) {
+      if (autoRoute(n)) { E[n].shaped = false; drawEdge(n); changed = true; }
+    });
+    if (!changed) undo.pop();
+    if (onEdge && list.length === 1) showHandles(list[0]);
+    paintCross();
+    paintBtns();
+  });
+
+  // ── คีย์ลัด ─────────────────────────────────────────────────────────
+  addEventListener('keydown', function (ev) {
+    var t = ev.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    var mod = ev.metaKey || ev.ctrlKey;
+    if (!mod) return;
+    var key = ev.key;
+    if (key === 'z' || key === 'Z') {
+      ev.preventDefault();
+      if (ev.shiftKey) doRedo(); else doUndo();
+    } else if (key === 'y') {
+      ev.preventDefault(); doRedo();
+    } else if (key === '=' || key === '+') {
+      ev.preventDefault(); step(1.25);
+    } else if (key === '-' || key === '_') {
+      ev.preventDefault(); step(0.8);
+    } else if (key === '0') {
+      ev.preventDefault(); scale = 1; paintZoom();
+    } else if (key === '9') {
+      ev.preventDefault(); scale = null; paintZoom();
+    }
+  });
+
+  // ── บันทึกสิ่งที่แก้ไว้ในเครื่อง · โหลดคืนเองตอนเปิดไฟล์ใหม่ ──────────
+  var srcEl = document.getElementById('flow-src');
+  var SRC = '', SRCNAME = 'flow.flow';
+  try {
+    if (srcEl) {
+      SRC = JSON.parse(srcEl.textContent);
+      SRCNAME = srcEl.dataset.name || SRCNAME;
+    }
+  } catch (e) {}
+  var SKEY = 'flowedit:' + SRCNAME + ':' + document.title;
+  var bSave = document.getElementById('ed-save'),
+      bDrop = document.getElementById('ed-drop'),
+      sInfo = document.getElementById('ed-saved');
+
+  function stamp(t) {
+    if (!sInfo) return;
+    sInfo.hidden = !t;
+    sInfo.textContent = t ? 'บันทึกไว้เมื่อ ' + t : '';
+    if (bDrop) bDrop.hidden = !t;
+  }
+  function save() {
+    var when = new Date().toLocaleString('th-TH');
+    try {
+      localStorage.setItem(SKEY, JSON.stringify({ when: when, data: snap() }));
+      stamp(when);
+    } catch (e) {
+      stamp('');
+      if (sInfo) { sInfo.hidden = false; sInfo.textContent = 'บันทึกไม่ได้ — เบราว์เซอร์ไม่ให้เก็บข้อมูล'; }
+    }
+  }
+  if (bSave) bSave.addEventListener('click', save);
+  if (bDrop) bDrop.addEventListener('click', function () {
+    try { localStorage.removeItem(SKEY); } catch (e) {}
+    stamp('');
+  });
+  (function () {                          // โหลดของที่บันทึกไว้ ถ้ามี
+    var raw = null;
+    try { raw = localStorage.getItem(SKEY); } catch (e) {}
+    if (!raw) return;
+    try {
+      var o = JSON.parse(raw);
+      restore(o.data);
+      undo = []; redo = [];               // ของที่บันทึกถือเป็นจุดตั้งต้นใหม่
+      paintBtns();
+      stamp(o.when);
+    } catch (e) {}
+  })();
+
+  // ── ดาวน์โหลด .flow ที่แก้แล้ว (เฉพาะเส้นที่ถูกย้ายปลาย) ─────────────
+  function reEsc(s) { return s.replace(/[.*+?^${}()|[\]\\\/-]/g, '\\$&'); }
+  function updatedFlow() {
+    var lines = SRC.split('\n');
+    for (var i = 0; i < E.length; i++) {
+      var e = E[i];
+      if (!e || (e.from === e.of && e.to === e.ot)) continue;
+      // จับป้ายตามที่ดีไซเนอร์พิมพ์จริง (เช่น -ไม่ใช่->) ไม่ใช่ตัวที่ normalize
+      // แล้ว (-No->) ไม่งั้นบรรทัดภาษาไทยจะหาไม่เจอ
+      var re = new RegExp('^(\\s*)' + reEsc(e.of) + '\\s+(\\S+)\\s+' +
+                          reEsc(e.ot) + '\\s*(#.*)?$');
+      for (var j = 0; j < lines.length; j++) {
+        var m = lines[j].match(re);
+        if (!m) continue;
+        lines[j] = m[1] + e.from + ' ' + m[2] + ' ' + e.to +
+          '   # ย้ายปลายเส้นในหน้า HTML — เดิม ' + e.of + ' ' + m[2] + ' ' + e.ot;
+        break;
+      }
+    }
+    return lines.join('\n');
+  }
+  var bDl = document.getElementById('ed-ch-dl');
+  if (bDl) bDl.addEventListener('click', function () {
+    if (!SRC) { bDl.textContent = 'ไม่มีต้นฉบับ .flow ฝังมาในไฟล์นี้'; return; }
+    var blob = new Blob([updatedFlow()], { type: 'text/plain;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = SRCNAME.replace(/\.flow$/, '') + '-edited.flow';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  });
+
+  addEventListener('keydown', function (ev) {
+    if ((ev.metaKey || ev.ctrlKey) && (ev.key === 's' || ev.key === 'S')) {
+      ev.preventDefault();
+      save();
+    }
+  });
+
+  paintBtns();
+  paintChanges();
+  paintCross();
+  paintZoom();
+})();
+"""
 
 
 HTML_TMPL = """<!DOCTYPE html>
@@ -1052,10 +2007,18 @@ HTML_TMPL = """<!DOCTYPE html>
   .sub b {{ font-weight:600; color:var(--ink); }}
   main {{ display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;
     padding:24px 28px 80px; }}
-  .lg {{ position:sticky; top:104px; flex:0 0 300px; background:var(--paper);
+  /* วางใต้ผัง ไม่ใช่เหนือผัง — ผังคือของหลักของหน้านี้ */
+  .lg {{ flex:1 0 100%; background:var(--paper);
     border:1px solid var(--hairline); border-radius:16px; padding:20px 24px; }}
-  .lg-t {{ font-weight:700; font-size:15px; margin-bottom:14px;
-    border-bottom:2px solid var(--ink); display:inline-block; padding-bottom:2px; }}
+  .lg-b {{ display:grid; gap:4px 28px;
+    grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); }}
+  .lg-t {{ font-family:inherit; font-weight:700; font-size:15px; color:var(--ink);
+    background:none; border:0; border-bottom:2px solid var(--ink); padding:0 0 2px;
+    display:flex; gap:10px; align-items:center; cursor:pointer; }}
+  .lg-caret {{ font-size:11px; transition:transform .15s ease; }}
+  .lg-t[aria-expanded="false"] .lg-caret {{ transform:rotate(-90deg); }}
+  .lg-b {{ margin-top:14px; }}
+  .lg-t[aria-expanded="false"] + .lg-b {{ display:none; }}
   .lg-i {{ display:flex; gap:12px; align-items:center; margin:12px 0; font-size:12px;
     color:var(--muted); line-height:1.4; }}
   .lg-i svg {{ flex:0 0 54px; }}
@@ -1135,11 +2098,42 @@ HTML_TMPL = """<!DOCTYPE html>
     border:1px solid var(--hairline); border-radius:16px; padding:8px; }}
   .zoomwrap {{ transform-origin:0 0; width:{W}px; }}
   svg.flow {{ display:block; width:{W}px; height:{H}px; }}
-  .zoom {{ display:flex; gap:8px; align-items:center; margin-bottom:12px; }}
+  /* แถบเครื่องมืออยู่ใต้ผัง เต็มความกว้าง — อยู่ในกรอบผังแล้วมันโดนบีบเป็น
+     คอลัมน์แคบ เพราะกรอบนั้นเป็นที่เลื่อนของ canvas ที่กว้างหลายหมื่น px */
+  .zoom {{ flex:1 0 100%; display:flex; flex-wrap:wrap; gap:8px;
+    align-items:center; margin:0 0 12px; }}
   .zoom button {{ font-family:inherit; font-size:12px; font-weight:600;
     color:var(--primary); background:var(--paper); border:1px solid var(--primary);
     border-radius:8px; padding:6px 12px; cursor:pointer; }}
   .zoom button[aria-pressed="true"] {{ background:var(--primary); color:#fff; }}
+  .zoom button[disabled] {{ opacity:.35; cursor:default; }}
+  .zoom .sep {{ width:1px; height:22px; background:var(--hairline); }}
+  .zoom kbd {{ font-family:ui-monospace,Menlo,monospace; font-size:11px;
+    border:1px solid var(--hairline); border-radius:5px; padding:1px 5px;
+    color:var(--muted); background:var(--paper); }}
+  .zoom .hint {{ font-size:12px; color:var(--muted); }}
+  /* ── ตัวแก้ผังในหน้า — เลื่อนเพื่อจัดสายตา ไม่ใช่การแก้ .flow ── */
+  .node {{ cursor:grab; }}
+  .node.dragging {{ cursor:grabbing; }}
+  /* <g> ใน SVG ไม่มีรูปทรงของตัวเอง — ถ้าปิด pointer-events ที่ลูกทั้งหมด
+     กล่องจะจับไม่ได้เลย ปิดเฉพาะตัวอักษรพอ */
+  .node text {{ pointer-events:none; user-select:none; }}
+  .e-hit {{ fill:none; stroke:transparent; stroke-width:28;
+    pointer-events:stroke; cursor:move; }}
+  .e-h {{ fill:var(--paper); stroke:var(--ink); stroke-width:3; cursor:crosshair; }}
+  .e-b {{ fill:var(--paper); stroke:var(--ink); stroke-width:2.5; cursor:move; }}
+  .e-b[hidden] {{ display:none; }}
+  /* คำเตือนของตัวแก้ผัง ไม่ใช่สีความหมายในผัง — ไม่ติดไปกับ .svg/.png */
+  .zoom button.warn {{ color:var(--no); border-color:var(--no); }}
+  .e-flag {{ stroke-width:16; }}
+  .e-h[hidden] {{ display:none; }}
+  .node.target rect, .node.target path {{ stroke:var(--ink); stroke-width:5; }}
+  .ed-ch {{ flex:1 0 100%; display:flex; gap:10px; align-items:center;
+    flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:8px; }}
+  .ed-ch code {{ font-family:ui-monospace,Menlo,monospace; color:var(--ink);
+    background:var(--paper); border:1px solid var(--hairline);
+    border-radius:6px; padding:1px 6px; }}
+  .dirty-note {{ font-size:12px; color:var(--perm-ink,#8a6100); }}
   .n-rect, .n-oval, .n-chip, .n-dia {{ fill:var(--primary); stroke:none; }}
   .n-note {{ fill:#FFFBEC; stroke:var(--perm); stroke-width:2; stroke-dasharray:8 6; }}
   text {{ text-anchor:middle; dominant-baseline:central; font-weight:600;
@@ -1170,14 +2164,34 @@ HTML_TMPL = """<!DOCTYPE html>
   </div>
 </header>
 <main>
-  {legend}
-  <div class="canvas">
-    <div class="zoom" role="group" aria-label="ย่อ/ขยาย">
-      <button data-z="fit" aria-pressed="true">พอดีจอ</button>
-      <button data-z="0.5">50%</button>
-      <button data-z="1">100% (ขนาดจริง)</button>
-      <span style="font-size:12px;color:var(--muted)">canvas {W}×{H}px</span>
+  <div class="zoom" role="group" aria-label="เครื่องมือผัง">
+    <button id="z-out" title="ย่อ (Ctrl/⌘ -)" aria-label="ย่อ">−</button>
+    <span class="hint" id="z-now">100%</span>
+    <button id="z-in" title="ขยาย (Ctrl/⌘ +)" aria-label="ขยาย">+</button>
+    <button data-z="fit" aria-pressed="true">พอดีจอ</button>
+    <button data-z="1" title="ขนาดจริง (Ctrl/⌘ 0)">100%</button>
+    <span class="sep"></span>
+    <button id="ed-undo" disabled title="ย้อน (Ctrl/⌘ Z)">↶ ย้อน</button>
+    <button id="ed-redo" disabled title="ทำซ้ำ (Ctrl/⌘ ⇧ Z)">↷ ทำซ้ำ</button>
+    <button id="ed-reset" disabled title="คืนตำแหน่งที่สคริปต์คำนวณไว้">คืนตำแหน่งเดิม</button>
+    <span class="sep"></span>
+    <button id="ed-save" title="เก็บที่แก้ไว้ในเครื่อง (Ctrl/⌘ S)">💾 บันทึก</button>
+    <button id="ed-drop" hidden title="ลบสิ่งที่บันทึกไว้ในเครื่อง">ล้างที่บันทึก</button>
+    <span class="hint" id="ed-saved" hidden></span>
+    <button class="warn" id="ed-cross" hidden></button>
+    <span class="sep"></span>
+    <span class="hint">canvas {W}×{H}px · ลากกล่องหรือลากเส้นเพื่อจัดสายตา
+      <kbd>Ctrl/⌘ Z</kbd> <kbd>Ctrl/⌘ +</kbd> <kbd>Ctrl/⌘ -</kbd> <kbd>Ctrl/⌘ 0</kbd></span>
+    <span class="hint dirty-note" id="ed-dirty" hidden>ตำแหน่งถูกเลื่อนด้วยมือแล้ว —
+      อยู่แค่ในหน้านี้ ไม่ได้แก้ .flow และไม่เปลี่ยนผลตรวจ G1–G9</span>
+    <div class="ed-ch" id="ed-ch" hidden>
+      <b style="color:var(--ink)">เส้นที่ถูกย้ายปลาย</b>
+      <span id="ed-ch-list"></span>
+      <button id="ed-ch-copy">คัดลอกเป็นบรรทัด .flow</button>
+      <button id="ed-ch-dl">ดาวน์โหลด .flow ที่แก้แล้ว</button>
+      <span>ย้ายปลายเส้น = เปลี่ยนความหมายของ flow — ต้องเอาไปแก้ใน .flow แล้ว render ใหม่</span>
     </div>
+  <div class="canvas" id="cv">
     <div class="zoomwrap" id="zw">
     <svg class="flow" viewBox="0 0 {W} {H}" role="img" aria-labelledby="ttl dsc">
       <title id="ttl">{flow}</title>
@@ -1200,29 +2214,13 @@ HTML_TMPL = """<!DOCTYPE html>
     </svg>
     </div>
   </div>
+  </div>
+  {legend}
   {report}
   {ledger}
 </main>
 <script>
   (function () {{
-    var zw = document.getElementById('zw'), W = {W}, H = {H};
-    var wrap = zw.parentElement, mode = 'fit';
-    function apply() {{
-      var k = mode === 'fit' ? Math.min(1, (wrap.clientWidth - 24) / W) : parseFloat(mode);
-      zw.style.transform = 'scale(' + k + ')';
-      zw.style.height = (H * k) + 'px';
-    }}
-    document.querySelectorAll('.zoom button').forEach(function (b) {{
-      b.addEventListener('click', function () {{
-        mode = b.dataset.z;
-        document.querySelectorAll('.zoom button').forEach(function (o) {{
-          o.setAttribute('aria-pressed', String(o === b));
-        }});
-        apply();
-      }});
-    }});
-    addEventListener('resize', function () {{ if (mode === 'fit') apply(); }});
-
     // รับ/ไม่รับรายข้อ — จำไว้ในเครื่องผู้ใช้ แล้วคัดลอกกลับไปวางในแชทได้
     (function () {{
       var items = [].slice.call(document.querySelectorAll('.rp-item'));
@@ -1264,7 +2262,7 @@ HTML_TMPL = """<!DOCTYPE html>
             (v === 'yes' ? 'รับ' : v === 'no' ? 'ไม่รับ' : 'ยังไม่ตัดสิน') +
             ' — ' + li.dataset.msg);
         }});
-        var t = out.join('\n');
+        var t = out.join('\\n');   // ต้อง escape — HTML_TMPL ไม่ใช่ raw string
         document.getElementById('rp-out').value = t;
         if (navigator.clipboard) navigator.clipboard.writeText(t);
       }});
@@ -1298,8 +2296,13 @@ HTML_TMPL = """<!DOCTYPE html>
         setTimeout(function () {{ g.classList.remove('hit'); }}, 1200);
       }});
     }});
-    apply();
   }})();
+</script>
+<script>
+{editor_js}
+</script>
+<script type="application/json" id="flow-src" data-name="{src_name}">
+{src_json}
 </script>
 <script type="application/json" id="flow-meta">
 {meta}
