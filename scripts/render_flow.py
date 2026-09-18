@@ -655,7 +655,8 @@ def esc(s):
 
 # data-* มีไว้ให้ตัวแก้ผังใน .html เท่านั้น — .svg/.png ที่ส่งต่อให้ Figma/dev
 # ต้องสะอาดเหมือนเดิม จึงถอดออกก่อนเขียนไฟล์ภาพ
-DATA_ATTR_RE = re.compile(r'\s(?:data-(?:e|from|to|pts|dist|lw|id|x|y|w|h))="[^"]*"')
+DATA_ATTR_RE = re.compile(
+    r'\s(?:data-(?:e|from|to|op|pts|dist|lw|id|x|y|w|h))="[^"]*"')
 
 
 def plain(frag):
@@ -731,9 +732,11 @@ def render(src, out_path=None, title=None, tokens=None):
                EDGE_NO: "e-solid", EDGE_PERM: "e-perm"}[e["type"]]
         marker = "arw-perm" if e["type"] == EDGE_PERM else "arw"
         raw = " ".join(f"{px:.1f},{py:.1f}" for px, py in pts)
+        op = {EDGE_SOLID: "->", EDGE_BACK: "..>", EDGE_YES: "-Yes->",
+              EDGE_NO: "-No->", EDGE_PERM: "~>"}[e["type"]]
         edge_svg.append(f'<path class="{cls}" marker-end="url(#{marker})" '
                         f'data-e="{ei}" data-from="{esc(s["id"])}" '
-                        f'data-to="{esc(t["id"])}" data-pts="{raw}" '
+                        f'data-to="{esc(t["id"])}" data-op="{op}" data-pts="{raw}" '
                         f'd="{rounded_path(pts)}"/>')
         if e["type"] in (EDGE_SOLID, EDGE_BACK):
             edge_svg.append(f'<circle class="e-dot" data-e="{ei}" '
@@ -1039,6 +1042,8 @@ LEGEND_HTML = """
         <button type="button" class="lg-t" id="lg-toggle" aria-expanded="true"
           aria-controls="lg-body"><span>Tools in Flow</span><span class="lg-caret" aria-hidden="true">▾</span></button>
         <div class="lg-b" id="lg-body">
+        <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><rect x="2" y="3" width="50" height="20" rx="10" fill="var(--primary)"/></svg><span>วงรี — จุดเริ่มต้นและจุดสิ้นสุด</span></div>
+        <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><rect x="2" y="3" width="50" height="20" rx="4" fill="var(--primary)"/></svg><span>สี่เหลี่ยมผืนผ้า — Process การกระทำหรือขั้นตอน (ใช้บ่อยที่สุด)</span></div>
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><path d="M27 2 L52 13 L27 24 L2 13 Z" fill="var(--primary)"/></svg><span>Diamond Condition — จบประโยคด้วย “ใช่หรือไม่?”</span></div>
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><rect x="2" y="5" width="50" height="16" rx="8" fill="var(--primary)"/></svg><span>Link To Flow</span></div>
         <div class="lg-i"><svg width="54" height="26" viewBox="0 0 54 26"><circle cx="6" cy="13" r="4" fill="var(--primary)"/><path d="M10 13 H44" stroke="var(--primary)" stroke-width="3"/><path d="M42 7 l8 6 -8 6" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>เส้นปกติ — กดแล้วไปหน้าบันทึก และไปต่อ</span></div>
@@ -1123,6 +1128,7 @@ EDITOR_JS = r"""
     var i = +p.dataset.e;
     E[i] = {
       path: p, from: p.dataset.from, to: p.dataset.to,
+      of: p.dataset.from, ot: p.dataset.to, op: p.dataset.op || '->',
       pts: (p.dataset.pts || '').split(' ').filter(Boolean).map(function (s) {
         var a = s.split(','); return [+a[0], +a[1]];
       }),
@@ -1138,6 +1144,67 @@ EDITOR_JS = r"""
   });
 
   function clonePts(ps) { return ps.map(function (q) { return [q[0], q[1]]; }); }
+
+  // ── กล่อง: กรอบปัจจุบัน · จุดเกาะ 4 ด้าน · หากล่องใต้เมาส์ ────────────
+  function rectOf(id) {
+    var g = nodeEls[id], o = off[id] || [0, 0];
+    return { x: +g.dataset.x + o[0], y: +g.dataset.y + o[1],
+             w: +g.dataset.w, h: +g.dataset.h };
+  }
+  function anchors(id) {
+    var r = rectOf(id);
+    return [{ p: [r.x, r.y + r.h / 2], d: 'L' },
+            { p: [r.x + r.w, r.y + r.h / 2], d: 'R' },
+            { p: [r.x + r.w / 2, r.y], d: 'T' },
+            { p: [r.x + r.w / 2, r.y + r.h], d: 'B' }];
+  }
+  function nodeAt(x, y) {
+    var hitId = null;
+    Object.keys(nodeEls).forEach(function (id) {
+      var r = rectOf(id);
+      if (x >= r.x - 10 && x <= r.x + r.w + 10 &&
+          y >= r.y - 10 && y <= r.y + r.h + 10) hitId = id;
+    });
+    return hitId;
+  }
+  function nearestAnchor(id, x, y) {
+    var best = null, bd = Infinity;
+    anchors(id).forEach(function (a) {
+      var d = Math.hypot(a.p[0] - x, a.p[1] - y);
+      if (d < bd) { bd = d; best = a; }
+    });
+    return best;
+  }
+
+  // ── เดินเส้นใหม่แบบมุมฉาก เมื่อปลายเส้นย้ายไปเกาะจุดอื่น ─────────────
+  var STUB = 60;
+  function isH(d) { return d === 'L' || d === 'R'; }
+  function stubOf(a, d) {
+    return d === 'L' ? [a[0] - STUB, a[1]] : d === 'R' ? [a[0] + STUB, a[1]] :
+           d === 'T' ? [a[0], a[1] - STUB] : [a[0], a[1] + STUB];
+  }
+  function dirAt(ps, head) {
+    var a = head ? ps[0] : ps[ps.length - 1];
+    var b = head ? ps[1] : ps[ps.length - 2];
+    if (Math.abs(b[0] - a[0]) >= Math.abs(b[1] - a[1])) return b[0] > a[0] ? 'R' : 'L';
+    return b[1] > a[1] ? 'B' : 'T';
+  }
+  function reroute(A, dA, B, dB) {
+    var a1 = stubOf(A, dA), b1 = stubOf(B, dB), mid;
+    if (isH(dA) && isH(dB)) {
+      var mx = (a1[0] + b1[0]) / 2; mid = [[mx, a1[1]], [mx, b1[1]]];
+    } else if (!isH(dA) && !isH(dB)) {
+      var my = (a1[1] + b1[1]) / 2; mid = [[a1[0], my], [b1[0], my]];
+    } else if (isH(dA)) { mid = [[b1[0], a1[1]]]; }
+    else { mid = [[a1[0], b1[1]]]; }
+    var raw = [A, a1].concat(mid, [b1, B]), out = [raw[0]];
+    for (var i = 1; i < raw.length; i++) {
+      var q = raw[i], l = out[out.length - 1];
+      if (Math.abs(q[0] - l[0]) < 0.5 && Math.abs(q[1] - l[1]) < 0.5) continue;
+      out.push(q);
+    }
+    return out;
+  }
 
   function roundedPath(ps, r) {
     var d = ['M ' + ps[0][0].toFixed(1) + ' ' + ps[0][1].toFixed(1)];
@@ -1200,6 +1267,65 @@ EDITOR_JS = r"""
       }
     }
   }
+
+  // ── จุดจับปลายเส้น — โผล่เมื่อเมาส์อยู่บนเส้น ลากไปเกาะกล่องอื่นได้ ──
+  var NS = 'http://www.w3.org/2000/svg';
+  function mkCircle() {
+    var c = document.createElementNS(NS, 'circle');
+    c.setAttribute('class', 'e-h');
+    c.setAttribute('r', '11');
+    c.setAttribute('hidden', '');
+    svg.appendChild(c);
+    return c;
+  }
+  var hA = mkCircle(), hB = mkCircle();
+  hA.dataset.end = 'head'; hB.dataset.end = 'tail';
+  var hovE = -1;
+  function showHandles(i) {
+    if (!E[i]) return;
+    hovE = i;
+    var p = E[i].pts, z = p[p.length - 1];
+    hA.setAttribute('cx', p[0][0]); hA.setAttribute('cy', p[0][1]);
+    hB.setAttribute('cx', z[0]); hB.setAttribute('cy', z[1]);
+    hA.removeAttribute('hidden'); hB.removeAttribute('hidden');
+  }
+  function hideHandles() {
+    hovE = -1;
+    hA.setAttribute('hidden', ''); hB.setAttribute('hidden', '');
+  }
+
+  function paintChanges() {
+    var box = document.getElementById('ed-ch');
+    if (!box) return;
+    var rows = [];
+    for (var i = 0; i < E.length; i++) {
+      var e = E[i];
+      if (e && (e.from !== e.of || e.to !== e.ot)) rows.push(e);
+    }
+    box.hidden = !rows.length;
+    var list = document.getElementById('ed-ch-list');
+    if (!list) return;
+    list.textContent = '';
+    rows.forEach(function (e, n) {
+      if (n) list.appendChild(document.createTextNode(' · '));
+      var a = document.createElement('code'), b = document.createElement('code');
+      a.textContent = e.of + ' ' + e.op + ' ' + e.ot;
+      b.textContent = e.from + ' ' + e.op + ' ' + e.to;
+      list.appendChild(a);
+      list.appendChild(document.createTextNode(' → '));
+      list.appendChild(b);
+    });
+    box.dataset.txt = rows.map(function (e) {
+      return e.from + ' ' + e.op + ' ' + e.to + '   # เดิม ' + e.of + ' ' + e.op + ' ' + e.ot;
+    }).join('\n');
+  }
+  var bCopy = document.getElementById('ed-ch-copy');
+  if (bCopy) bCopy.addEventListener('click', function () {
+    var t = (document.getElementById('ed-ch').dataset.txt || '');
+    if (navigator.clipboard) navigator.clipboard.writeText(t);
+    bCopy.textContent = 'คัดลอกแล้ว';
+    setTimeout(function () { bCopy.textContent = 'คัดลอกเป็นบรรทัด .flow'; }, 1500);
+  });
 
   function draw() {
     Object.keys(off).forEach(function (id) {
@@ -1267,14 +1393,23 @@ EDITOR_JS = r"""
   function snap() {
     return JSON.stringify({
       o: off,
-      e: E.map(function (e) { return e ? e.pts : null; })
+      e: E.map(function (e) { return e ? { p: e.pts, f: e.from, t: e.to } : null; })
     });
   }
   function restore(s) {
     var d = JSON.parse(s);
     off = d.o;
-    for (var i = 0; i < E.length; i++) if (E[i] && d.e[i]) E[i].pts = d.e[i];
+    for (var i = 0; i < E.length; i++) {
+      if (!E[i] || !d.e[i]) continue;
+      E[i].pts = d.e[i].p;
+      E[i].from = d.e[i].f;
+      E[i].to = d.e[i].t;
+      E[i].path.dataset.from = E[i].from;
+      E[i].path.dataset.to = E[i].to;
+    }
     draw();
+    hideHandles();
+    paintChanges();
     paintBtns();
   }
   var bUndo = document.getElementById('ed-undo'),
@@ -1309,9 +1444,23 @@ EDITOR_JS = r"""
 
   // ── จับการลาก ───────────────────────────────────────────────────────
   var drag = null;
+  function svgPt(ev) {
+    var r = svg.getBoundingClientRect(), kk = k();
+    return [(ev.clientX - r.left) / kk, (ev.clientY - r.top) / kk];
+  }
   svg.addEventListener('pointerdown', function (ev) {
     var g = ev.target.closest ? ev.target.closest('g.node') : null;
-    var hit = ev.target.classList && ev.target.classList.contains('e-hit') ? ev.target : null;
+    var cls = ev.target.classList;
+    var hit = cls && cls.contains('e-hit') ? ev.target : null;
+    var handle = cls && cls.contains('e-h') ? ev.target : null;
+    if (handle && hovE >= 0) {
+      ev.preventDefault();
+      begin();
+      drag = { kind: 'end', i: hovE, head: handle.dataset.end === 'head',
+               base: clonePts(E[hovE].pts), node: null, anchor: null };
+      svg.setPointerCapture(ev.pointerId);
+      return;
+    }
     if (!g && !hit) return;
     ev.preventDefault();
     begin();
@@ -1339,7 +1488,35 @@ EDITOR_JS = r"""
   });
 
   svg.addEventListener('pointermove', function (ev) {
-    if (!drag) return;
+    if (!drag) {                          // ไม่ได้ลากอยู่ — แค่โชว์จุดจับของเส้นที่ชี้อยู่
+      var c = ev.target.classList;
+      if (c && c.contains('e-hit')) showHandles(+ev.target.dataset.e);
+      else if (!c || !c.contains('e-h')) hideHandles();
+      return;
+    }
+    if (drag.kind === 'end') {
+      var q = svgPt(ev);
+      var id = nodeAt(q[0], q[1]);
+      document.querySelectorAll('g.node.target').forEach(function (o) {
+        o.classList.remove('target');
+      });
+      var e = E[drag.i];
+      if (id) {
+        nodeEls[id].classList.add('target');
+        var a = nearestAnchor(id, q[0], q[1]);
+        var other = drag.head ? drag.base[drag.base.length - 1] : drag.base[0];
+        var od = dirAt(drag.base, !drag.head);
+        e.pts = drag.head ? reroute(a.p, a.d, other, od) : reroute(other, od, a.p, a.d);
+        drag.node = id;
+        drag.anchor = a;
+      } else {                            // ปล่อยนอกกล่องไม่ได้ — เส้นต้องแตะกล่องเสมอ (F-20)
+        e.pts = clonePts(drag.base);
+        drag.node = null;
+      }
+      drawEdge(drag.i);
+      showHandles(drag.i);
+      return;
+    }
     var kk = k();
     var dx = (ev.clientX - drag.x) / kk, dy = (ev.clientY - drag.y) / kk;
     if (drag.kind === 'node') {
@@ -1358,6 +1535,20 @@ EDITOR_JS = r"""
 
   function endDrag(ev) {
     if (!drag) return;
+    if (drag.kind === 'end') {
+      document.querySelectorAll('g.node.target').forEach(function (o) {
+        o.classList.remove('target');
+      });
+      var e = E[drag.i];
+      if (drag.node) {
+        if (drag.head) e.from = drag.node; else e.to = drag.node;
+        e.path.dataset.from = e.from;
+        e.path.dataset.to = e.to;
+      } else {
+        undo.pop();                       // ไม่ได้เปลี่ยนอะไร ไม่ต้องกินคิว undo
+      }
+      paintChanges();
+    }
     var g3 = nodeEls[drag.id];
     if (g3) g3.classList.remove('dragging');
     if (ev && ev.pointerId !== undefined && svg.hasPointerCapture(ev.pointerId)) {
@@ -1393,6 +1584,7 @@ EDITOR_JS = r"""
   });
 
   paintBtns();
+  paintChanges();
   paintZoom();
 })();
 """
@@ -1526,9 +1718,19 @@ HTML_TMPL = """<!DOCTYPE html>
   /* ── ตัวแก้ผังในหน้า — เลื่อนเพื่อจัดสายตา ไม่ใช่การแก้ .flow ── */
   .node {{ cursor:grab; }}
   .node.dragging {{ cursor:grabbing; }}
-  .node * {{ pointer-events:none; }}
+  /* <g> ใน SVG ไม่มีรูปทรงของตัวเอง — ถ้าปิด pointer-events ที่ลูกทั้งหมด
+     กล่องจะจับไม่ได้เลย ปิดเฉพาะตัวอักษรพอ */
+  .node text {{ pointer-events:none; user-select:none; }}
   .e-hit {{ fill:none; stroke:transparent; stroke-width:28;
     pointer-events:stroke; cursor:move; }}
+  .e-h {{ fill:var(--paper); stroke:var(--ink); stroke-width:3; cursor:crosshair; }}
+  .e-h[hidden] {{ display:none; }}
+  .node.target rect, .node.target path {{ stroke:var(--ink); stroke-width:5; }}
+  .ed-ch {{ flex:1 0 100%; display:flex; gap:10px; align-items:center;
+    flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:8px; }}
+  .ed-ch code {{ font-family:ui-monospace,Menlo,monospace; color:var(--ink);
+    background:var(--paper); border:1px solid var(--hairline);
+    border-radius:6px; padding:1px 6px; }}
   .dirty-note {{ font-size:12px; color:var(--perm-ink,#8a6100); }}
   .n-rect, .n-oval, .n-chip, .n-dia {{ fill:var(--primary); stroke:none; }}
   .n-note {{ fill:#FFFBEC; stroke:var(--perm); stroke-width:2; stroke-dasharray:8 6; }}
@@ -1577,6 +1779,12 @@ HTML_TMPL = """<!DOCTYPE html>
         <kbd>Ctrl/⌘ Z</kbd> <kbd>Ctrl/⌘ +</kbd> <kbd>Ctrl/⌘ -</kbd> <kbd>Ctrl/⌘ 0</kbd></span>
       <span class="hint dirty-note" id="ed-dirty" hidden>ตำแหน่งถูกเลื่อนด้วยมือแล้ว —
         อยู่แค่ในหน้านี้ ไม่ได้แก้ .flow และไม่เปลี่ยนผลตรวจ G1–G9</span>
+      <div class="ed-ch" id="ed-ch" hidden>
+        <b style="color:var(--ink)">เส้นที่ถูกย้ายปลาย</b>
+        <span id="ed-ch-list"></span>
+        <button id="ed-ch-copy">คัดลอกเป็นบรรทัด .flow</button>
+        <span>ย้ายปลายเส้น = เปลี่ยนความหมายของ flow — ต้องเอาไปแก้ใน .flow แล้ว render ใหม่</span>
+      </div>
     </div>
     <div class="zoomwrap" id="zw">
     <svg class="flow" viewBox="0 0 {W} {H}" role="img" aria-labelledby="ttl dsc">
