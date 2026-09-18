@@ -184,18 +184,47 @@ class FlowError(Exception):
     pass
 
 
+AUTHOR_RE = re.compile(r"\[AI-([A-Za-z0-9_.-]+)\]\s*(.*)")
+
+
+def authorship(comment):
+    """คอมเมนต์ท้ายบรรทัดที่ขึ้นต้นด้วย [AI-xx] = บรรทัดนี้มาจากข้อเสนอของ AI
+
+    คอมเมนต์อื่นไม่นับเป็น authorship — ของดีไซเนอร์ถือเป็นค่าตั้งต้นเสมอ
+    """
+    m = AUTHOR_RE.search(comment or "")
+    if not m:
+        return {"author": "human"}
+    return {"author": "ai", "ai_id": m.group(1), "note": m.group(2).strip()}
+
+
+def author_fields(d):
+    """หยิบเฉพาะ field authorship ที่มีจริง — ของเดิมที่ไม่มีจะได้ human เป็นค่าตั้งต้น"""
+    out = {"author": d.get("author", "human")}
+    for k in ("ai_id", "note"):
+        if d.get(k):
+            out[k] = d[k]
+    return out
+
+
 def parse(path):
     meta = {"FLOW": "", "GOAL": "", "OWNER": "", "DATE": "", "NOTE": ""}
     spacing = {"edge": 500.0, "label": 100.0}
     nodes, edges, perms, order = {}, [], [], []
+    closed = []
 
     with open(path, encoding="utf-8") as fh:
         raw = fh.readlines()
 
     for ln, line in enumerate(raw, 1):
-        line = line.split("#")[0].rstrip() if not line.strip().startswith("#") else ""
+        if line.strip().startswith("#"):
+            line, comment = "", ""
+        else:
+            line, _, comment = line.partition("#")
+            line, comment = line.rstrip(), comment.strip()
         if not line.strip():
             continue
+        who = authorship(comment)
         head, _, rest = line.strip().partition(" ")
         key = head.upper()
         rest = rest.strip()
@@ -209,9 +238,13 @@ def parse(path):
                 if k in spacing and v:
                     spacing[k] = float(v)
             continue
+        if key == "CLOSED":
+            nid, _, why = rest.partition(" ")
+            closed.append((nid, why.strip() or "ปิดแล้ว", ln))
+            continue
         if key == "PERM":
             nid, _, text = rest.partition(" ")
-            perms.append((nid, text.strip() or "มี Permutation (Edge Case)", ln))
+            perms.append((nid, text.strip() or "มี Permutation (Edge Case)", ln, who))
             continue
         if key in ALIAS or key in SHAPE:
             kind = ALIAS.get(key, key)
@@ -222,7 +255,8 @@ def parse(path):
                 raise FlowError(f"บรรทัด {ln}: node {nid} ยังไม่มีข้อความ")
             if nid in nodes:
                 raise FlowError(f"บรรทัด {ln}: id '{nid}' ซ้ำ")
-            nodes[nid] = {"id": nid, "kind": kind, "label": label.strip(), "line": ln}
+            nodes[nid] = {"id": nid, "kind": kind, "label": label.strip(),
+                          "line": ln, **who}
             order.append(nid)
             continue
 
@@ -246,17 +280,25 @@ def parse(path):
                 etype, label = EDGE_NO, "No"
             else:
                 etype = EDGE_SOLID
-        edges.append({"src": src, "dst": dst, "type": etype, "label": label, "line": ln})
+        edges.append({"src": src, "dst": dst, "type": etype, "label": label,
+                      "line": ln, **who})
 
     # PERM sugar -> a real note node + a perm edge, so it lays out like anything else
-    for nid, text, ln in perms:
+    for nid, text, ln, who in perms:
         if nid not in nodes:
             raise FlowError(f"บรรทัด {ln}: PERM ชี้ไป node '{nid}' ที่ไม่มีอยู่")
         note = f"{nid}__perm"
-        nodes[note] = {"id": note, "kind": "PERMNOTE", "label": text, "line": ln}
+        nodes[note] = {"id": note, "kind": "PERMNOTE", "label": text,
+                       "line": ln, **who}
         order.append(note)
-        edges.append({"src": nid, "dst": note, "type": EDGE_PERM, "label": "", "line": ln})
+        edges.append({"src": nid, "dst": note, "type": EDGE_PERM, "label": "",
+                      "line": ln, **who})
         nodes[nid]["has_perm"] = True
+
+    for nid, why, ln in closed:
+        if nid not in nodes:
+            raise FlowError(f"บรรทัด {ln}: CLOSED ชี้ไป node '{nid}' ที่ไม่มีอยู่")
+        nodes[nid]["closed"] = why
 
     for e in edges:
         for side in ("src", "dst"):
@@ -638,7 +680,9 @@ def node_svg(n):
     for i, l in enumerate(lines):
         out.append(f'<text class="{cls}" x="{n["cx"]:.1f}" y="{top + i*LINE_H:.1f}" '
                    f'font-size="{fs}">{esc(l)}</text>')
-    return "\n    ".join(out)
+    inner = "\n      ".join(out)
+    return (f'<g id="n-{esc(n["id"])}" class="node">\n      '
+            f'{inner}\n    </g>')
 
 
 # -------------------------------------------------------------------- render ----
@@ -695,6 +739,7 @@ def render(src, out_path=None, title=None, tokens=None):
             "label_pos": lab, "crosses": hits_node(pts, nodes, {e["src"], e["dst"]}),
             "outside_canvas": outside_canvas,
             "line": e["line"],
+            **author_fields(e),
         })
 
     flow_meta = {
@@ -708,30 +753,263 @@ def render(src, out_path=None, title=None, tokens=None):
         "nodes": [{"id": n["id"], "kind": n["kind"], "label": n["label"],
                    "x": round(n["x"], 1), "y": round(n["y"], 1),
                    "w": n["w"], "h": n["h"], "rank": n["rank"], "col": n["col"],
-                   "line": n["line"]} for n in (nodes[i] for i in order)],
+                   "line": n["line"], **author_fields(n)}
+                  for n in (nodes[i] for i in order)],
         "edges": meta_edges,
     }
 
     legend = LEGEND_HTML
+    ledger = build_ledger(flow_meta)
+    report = build_report(run_checks(meta, nodes, order, edges, flow_meta), nodes)
     head = title or flow_meta["flow"] or "User Flow"
     svg_nodes = "\n    ".join(node_svg(nodes[i]) for i in order)
+    out_path = out_path or os.path.splitext(src)[0] + ".html"
+    stem = os.path.splitext(out_path)[0]
+
+    # ── ไฟล์รูปแยก สำหรับแปะ Jira / Lark / ส่ง dev ──────────────────────
+    # ทำก่อน HTML เพื่อให้ exports ที่ฝังใน .html ตรงกับ .meta.json
+    alt = esc(flow_meta["flow"] or "User Flow")
+    tok = {f"t_{k}": v for k, v in TOKENS.items()}
+    body = "\n".join(edge_svg) + "\n" + svg_nodes + "\n" + "\n".join(label_svg)
+    svg_path = stem + ".svg"
+    with open(svg_path, "w", encoding="utf-8") as fh:
+        fh.write(SVG_TMPL.format(W=round(W), H=round(H), alt=alt,
+                                 edges="\n".join(edge_svg), nodes=svg_nodes,
+                                 labels="\n".join(label_svg), **tok))
+
+    # .png ต้องผ่านผืนจัตุรัสก่อน เพราะ qlmanage คืนรูปจัตุรัสเสมอ (ดู write_png)
+    side = max(round(W), round(H))
+    square_svg = SVG_TMPL.format(
+        W=side, H=side, alt=alt,
+        edges=f'<g transform="translate({(side - W) / 2:.1f},{(side - H) / 2:.1f})">'
+              f"\n{body}\n</g>",
+        nodes="", labels="", **tok)
+    png_path = write_png(square_svg, stem + ".png", W, H, side,
+                         max(1200, min(side, 4000)))
+    flow_meta["exports"] = {
+        "html": os.path.basename(out_path),
+        "svg": os.path.basename(svg_path),
+        "png": os.path.basename(png_path) if png_path else None,
+    }
+
     html = HTML_TMPL.format(
         title=esc(head), flow=esc(flow_meta["flow"]),
         goal=esc(meta["GOAL"]), owner=esc(meta["OWNER"]), date=esc(meta["DATE"]),
         note=esc(meta["NOTE"]),
-        W=round(W), H=round(H), legend=legend,
+        W=round(W), H=round(H), legend=legend, ledger=ledger, report=report,
         edges="\n    ".join(edge_svg), labels="\n    ".join(label_svg),
         nodes=svg_nodes, meta=json.dumps(flow_meta, ensure_ascii=False, indent=1),
         counts=f"{len([n for n in order if not n.endswith('__perm')])} กล่อง · "
                f"{len([e for e in edges if e['type'] != EDGE_PERM])} เส้น",
-        **{f"t_{k}": v for k, v in TOKENS.items()})
-
-    out_path = out_path or os.path.splitext(src)[0] + ".html"
+        **tok)
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(html)
-    with open(os.path.splitext(out_path)[0] + ".meta.json", "w", encoding="utf-8") as fh:
+    with open(stem + ".meta.json", "w", encoding="utf-8") as fh:
         json.dump(flow_meta, fh, ensure_ascii=False, indent=1)
     return out_path, flow_meta
+
+
+SVG_TMPL = """<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}"
+  viewBox="0 0 {W} {H}" role="img" aria-label="{alt}">
+<title>{alt}</title>
+<style>
+  text {{ text-anchor:middle; dominant-baseline:central; font-weight:600;
+    font-family:'Sarabun','Noto Sans Thai','Helvetica Neue',sans-serif; }}
+  .n-rect, .n-oval, .n-chip, .n-dia {{ fill:{t_primary}; stroke:none; }}
+  .n-note {{ fill:#FFFBEC; stroke:{t_perm}; stroke-width:2; stroke-dasharray:8 6; }}
+  .t-on {{ fill:#fff; }} .t-ink {{ fill:{t_ink}; }} .t-note {{ fill:#8A6100; }}
+  .e-solid {{ fill:none; stroke:{t_primary}; stroke-width:3; }}
+  .e-back {{ fill:none; stroke:{t_primary}; stroke-width:3; stroke-dasharray:9 8; }}
+  .e-perm {{ fill:none; stroke:{t_perm}; stroke-width:4; stroke-dasharray:10 8;
+    stroke-linecap:round; }}
+  .e-dot {{ fill:{t_primary}; }}
+  .edge-label rect {{ fill:{t_paper}; stroke:none; }}
+  .l-yes {{ fill:{t_yes}; font-weight:700; }}
+  .l-no {{ fill:{t_no}; font-weight:700; }}
+  .l-neutral {{ fill:{t_muted}; font-weight:700; }}
+</style>
+<rect width="{W}" height="{H}" fill="{t_paper}"/>
+<defs>
+  <marker id="arw" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
+    markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1 L10 6 L2 11" fill="none" stroke="{t_primary}" stroke-width="2.4"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arw-perm" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7"
+    markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 1 L10 6 L2 11" fill="none" stroke="{t_perm}" stroke-width="2.4"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+{edges}
+{nodes}
+{labels}
+</svg>
+"""
+
+
+def write_png(square_svg, png_path, W, H, side, px):
+    """แปลงผังเป็น .png ด้วย qlmanage + sips ที่ macOS แถมมาให้ (ไม่ต้องลงอะไรเพิ่ม)
+
+    qlmanage คืนรูปเป็นสี่เหลี่ยมจัตุรัสเสมอ ถ้าส่ง SVG แนวนอนเข้าไปตรง ๆ ขวาจะโดนตัด
+    จึงวางผังไว้กลางผืนจัตุรัสก่อน แล้วค่อย crop กลับเป็นอัตราส่วนจริง
+
+    เครื่องที่ไม่มี qlmanage/sips (Windows/Linux) ข้ามไปเงียบ ๆ ไม่ถือเป็น error
+    """
+    import shutil
+    import subprocess
+    import tempfile
+
+    if not (shutil.which("qlmanage") and shutil.which("sips")):
+        return None
+    with tempfile.TemporaryDirectory() as tmp:
+        sq_path = os.path.join(tmp, "square.svg")
+        with open(sq_path, "w", encoding="utf-8") as fh:
+            fh.write(square_svg)
+        try:
+            subprocess.run(["qlmanage", "-t", "-s", str(px), "-o", tmp, sq_path],
+                           check=True, capture_output=True, timeout=180)
+            made = [f for f in os.listdir(tmp) if f.lower().endswith(".png")]
+            if not made:
+                return None
+            shot = os.path.join(tmp, made[0])
+            scale = px / side
+            subprocess.run(
+                ["sips", "--cropToHeightWidth",
+                 str(max(1, round(H * scale))), str(max(1, round(W * scale))), shot],
+                check=True, capture_output=True, timeout=120)
+            shutil.move(shot, png_path)
+        except (subprocess.SubprocessError, OSError):
+            return None
+    return png_path
+
+
+SEV_LABEL = {"R0": "ต้องแก้ก่อนส่ง", "R1": "ควรแก้", "R2": "ข้อสังเกต"}
+
+
+def run_checks(hdr, nodes, order, edges, flow_meta):
+    """เรียก self_check.py ตัวจริงมาใช้ — กฎมีที่เดียว ไม่เขียนซ้ำในนี้
+
+    import ข้างในฟังก์ชันเพราะ self_check import จากไฟล์นี้ (กัน circular import)
+    """
+    try:
+        import self_check as sc
+    except ImportError:
+        return None
+    rows = sc.check_draft_gate(hdr, nodes, order)
+    rows += sc.check_source(nodes, order, edges)
+    rows += sc.check_rounds(nodes, order)
+    rows += sc.check_authorship(nodes, order, edges)
+    rows += sc.check_coverage(nodes, order, edges)
+    rows += sc.check_geometry(flow_meta)
+    rows.sort(key=lambda r: (sc.SEV_ORDER[r["sev"]], r["code"]))
+    return rows
+
+
+def build_report(rows, nodes):
+    """บล็อกผลตรวจใต้ผัง — คลิกชื่อกล่องแล้วกระโดดไปหาบนผังได้"""
+    if rows is None:
+        return ""
+    counts = {s: sum(1 for r in rows if r["sev"] == s) for s in ("R0", "R1", "R2")}
+    pills = "".join(
+        f'<span class="rp-pill rp-p{s.lower()}">{s} {counts[s]}</span>'
+        for s in ("R0", "R1", "R2"))
+
+    if not rows:
+        body = '<p class="rp-ok">ผ่านทุกข้อ — ไม่มีอะไรค้าง</p>'
+    else:
+        items = []
+        for i, r in enumerate(rows, 1):
+            targets = [w.strip() for w in str(r["where"]).split(",") if w.strip()]
+            chips = "".join(
+                f'<button class="rp-go" data-go="n-{esc(t)}" type="button">'
+                f'{esc(nodes[t]["label"])}</button>'
+                for t in targets if t in nodes)
+            if chips:
+                where = f'<div class="rp-where">{chips}</div>'
+            elif r["where"]:
+                where = f'<div class="rp-where rp-plain">{esc(str(r["where"]))}</div>'
+            else:
+                where = ""
+            rid = f'{r["code"]}-{i}'
+            items.append(
+                f'<li class="rp-item rp-i{r["sev"].lower()}" id="i-{rid}"'
+                f' data-id="{rid}" data-code="{esc(r["code"])}"'
+                f' data-msg="{esc(r["msg"])}">'
+                f'<div class="rp-head"><span class="rp-sev">{r["sev"]}</span>'
+                f'<span class="rp-code">{esc(r["code"])}</span>'
+                f'<span class="rp-sevname">{SEV_LABEL[r["sev"]]}</span></div>'
+                f'<div class="rp-msg">{esc(r["msg"])}</div>{where}'
+                f'<div class="rp-dec">'
+                f'<button class="rp-yes" data-id="{rid}" data-v="yes" type="button"'
+                f' aria-pressed="false">รับ</button>'
+                f'<button class="rp-no" data-id="{rid}" data-v="no" type="button"'
+                f' aria-pressed="false">ไม่รับ</button></div></li>')
+        body = ('<div class="rp-bar"><span id="rp-count"></span>'
+                '<button id="rp-copy" type="button">คัดลอกผลกลับไปวางในแชท</button>'
+                '<button id="rp-reset" type="button">ล้างคำตัดสิน</button></div>'
+                '<ul class="rp-list">' + "".join(items) + "</ul>"
+                '<textarea id="rp-out" rows="4" readonly'
+                ' placeholder="กดคัดลอกแล้วข้อความจะมาอยู่ตรงนี้"></textarea>')
+
+    return ('\n      <div class="rp">\n'
+            '        <div class="rp-t">ผลตรวจกฎ</div>\n'
+            f'        <div class="rp-pills">{pills}</div>\n'
+            f'        {body}\n'
+            '        <p class="rp-foot">รหัสกฎอ้างอิงจาก <code>flow-rules.md</code> — '
+            'R0 ต้องแก้ก่อนส่ง · R1 ควรแก้ · R2 ดีไซเนอร์ตัดสินใจ</p>\n'
+            '      </div>')
+
+
+LEDGER_LIMIT = 0.40
+
+
+def build_ledger(flow_meta):
+    """บล็อกบอกที่มาของกล่อง — ใครคิด ไม่ใช่กล่องนั้นคืออะไร
+
+    ไม่แตะ geometry และไม่เพิ่มสีลงผัง (style-guide §สีเน้นใช้ประหยัด)
+    """
+    boxes = [n for n in flow_meta["nodes"] if n["kind"] != "PERMNOTE"]
+    ai_boxes = [n for n in boxes if n.get("author") == "ai"]
+    ai_edges = [e for e in flow_meta["edges"] if e.get("author") == "ai"]
+    total = len(boxes) or 1
+    pct = len(ai_boxes) / total
+
+    if not ai_boxes and not ai_edges:
+        return ('\n      <div class="led">\n'
+                '        <div class="led-t">ที่มาของ flow</div>\n'
+                f'        <p class="led-all">ทุกกล่องทั้ง {total} กล่องมาจากดีไซเนอร์ '
+                'ยังไม่มีข้อเสนอของ AI ที่ถูกอนุมัติลงผัง</p>\n'
+                '      </div>')
+
+    rows = []
+    for n in ai_boxes:
+        rows.append(f'<tr><td class="led-k">กล่อง</td><td>{esc(n["label"])}</td>'
+                    f'<td class="led-id">{esc(n.get("ai_id", ""))}</td>'
+                    f'<td>{esc(n.get("note", ""))}</td></tr>')
+    for e in ai_edges:
+        rows.append(f'<tr><td class="led-k">เส้น</td>'
+                    f'<td>{esc(e["src"])} → {esc(e["dst"])}</td>'
+                    f'<td class="led-id">{esc(e.get("ai_id", ""))}</td>'
+                    f'<td>{esc(e.get("note", ""))}</td></tr>')
+
+    warn = ""
+    if pct > LEDGER_LIMIT:
+        warn = ('<p class="led-warn">⚠ กล่องที่มาจากข้อเสนอของ AI เกิน '
+                f'{LEDGER_LIMIT:.0%} ของทั้งใบ — ใบนี้กำลังกลายเป็น flow ของ AI '
+                'ควรถอยไปคุยโครงกับดีไซเนอร์ก่อน</p>')
+
+    return ('\n      <div class="led">\n'
+            '        <div class="led-t">ที่มาของ flow</div>\n'
+            f'        <p class="led-sum">ดีไซเนอร์เขียน <b>{total - len(ai_boxes)}</b> กล่อง '
+            f'· มาจากข้อเสนอของ AI ที่อนุมัติแล้ว <b>{len(ai_boxes)}</b> กล่อง '
+            f'(<b>{pct:.0%}</b> ของทั้งใบ) และ <b>{len(ai_edges)}</b> เส้น</p>\n'
+            f'        {warn}\n'
+            '        <table class="led-tb"><thead><tr><th>ชนิด</th><th>ที่ไหน</th>'
+            '<th>ข้อเสนอ</th><th>เหตุผล</th></tr></thead><tbody>\n          '
+            + "\n          ".join(rows)
+            + '\n        </tbody></table>\n      </div>')
 
 
 LEGEND_HTML = """
@@ -764,13 +1042,15 @@ HTML_TMPL = """<!DOCTYPE html>
   }}
   * {{ box-sizing: border-box; }}
   body {{ margin:0; background:var(--paper-2); color:var(--ink);
-    font-family:'Sarabun',-apple-system,'Helvetica Neue',sans-serif; }}
+    font-family:'Sarabun','Noto Sans Thai','IBM Plex Sans Thai',-apple-system,
+      'Thonburi','Helvetica Neue',sans-serif; }}
   header {{ position:sticky; top:0; z-index:5; background:var(--paper);
     border-bottom:1px solid var(--hairline); padding:20px 28px; }}
   h1 {{ font-size:20px; margin:0 0 4px; font-weight:700; }}
   .sub {{ font-size:13px; color:var(--muted); display:flex; gap:16px; flex-wrap:wrap; }}
   .sub b {{ font-weight:600; color:var(--ink); }}
-  main {{ display:flex; gap:24px; align-items:flex-start; padding:24px 28px 80px; }}
+  main {{ display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;
+    padding:24px 28px 80px; }}
   .lg {{ position:sticky; top:104px; flex:0 0 300px; background:var(--paper);
     border:1px solid var(--hairline); border-radius:16px; padding:20px 24px; }}
   .lg-t {{ font-weight:700; font-size:15px; margin-bottom:14px;
@@ -778,6 +1058,78 @@ HTML_TMPL = """<!DOCTYPE html>
   .lg-i {{ display:flex; gap:12px; align-items:center; margin:12px 0; font-size:12px;
     color:var(--muted); line-height:1.4; }}
   .lg-i svg {{ flex:0 0 54px; }}
+  .rp {{ flex:1 0 100%; background:var(--paper); border:1px solid var(--hairline);
+    border-radius:16px; padding:16px 24px; }}
+  .rp-t {{ font-weight:700; font-size:15px; margin-bottom:12px;
+    border-bottom:2px solid var(--ink); display:inline-block; padding-bottom:2px; }}
+  .rp-pills {{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }}
+  .rp-pill {{ font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px;
+    border:1px solid var(--hairline); color:var(--muted); }}
+  .rp-pr0 {{ color:var(--no); border-color:var(--no); }}
+  .rp-pr1 {{ color:#B26A00; border-color:#E3B872; }}
+  .rp-ok {{ font-size:14px; color:var(--yes); font-weight:700; margin:0; }}
+  .rp-list {{ list-style:none; margin:0; padding:0; display:flex;
+    flex-direction:column; gap:10px; }}
+  .rp-item {{ border-left:3px solid var(--hairline); padding:2px 0 2px 14px; }}
+  .rp-ir0 {{ border-left-color:var(--no); }}
+  .rp-ir1 {{ border-left-color:#E3B872; }}
+  .rp-head {{ display:flex; gap:8px; align-items:baseline; flex-wrap:wrap;
+    font-size:12px; }}
+  .rp-sev {{ font-weight:700; }}
+  .rp-code {{ font-weight:700; color:var(--primary); }}
+  .rp-sevname {{ color:var(--muted); }}
+  .rp-msg {{ font-size:13.5px; line-height:1.6; margin-top:2px; }}
+  .rp-where {{ display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }}
+  .rp-plain {{ font-size:12px; color:var(--muted); }}
+  .rp-go {{ font:inherit; font-size:12px; font-weight:600; cursor:pointer;
+    background:var(--paper_2); color:var(--primary); border:1px solid var(--hairline);
+    border-radius:999px; padding:3px 11px; }}
+  .rp-go:hover {{ border-color:var(--primary); }}
+  .rp-go:focus-visible {{ outline:2px solid var(--primary); outline-offset:2px; }}
+  .rp-foot {{ font-size:12px; color:var(--muted); margin:14px 0 0; }}
+  .rp-bar {{ display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    margin-bottom:12px; font-size:13px; }}
+  .rp-bar button {{ font:inherit; font-size:12px; font-weight:600; cursor:pointer;
+    background:var(--paper_2); border:1px solid var(--hairline); color:var(--ink);
+    border-radius:8px; padding:5px 12px; }}
+  .rp-bar button:hover {{ border-color:var(--primary); color:var(--primary); }}
+  #rp-count {{ font-weight:700; margin-right:auto; }}
+  .rp-dec {{ display:flex; gap:8px; margin-top:9px; }}
+  .rp-dec button {{ font:inherit; font-size:12px; font-weight:700; cursor:pointer;
+    background:var(--paper); border:1px solid var(--hairline); color:var(--muted);
+    border-radius:8px; padding:4px 14px; }}
+  .rp-dec button[aria-pressed="true"].rp-yes {{ background:var(--yes); color:#fff;
+    border-color:var(--yes); }}
+  .rp-dec button[aria-pressed="true"].rp-no {{ background:var(--no); color:#fff;
+    border-color:var(--no); }}
+  .rp-dec button:focus-visible {{ outline:2px solid var(--primary);
+    outline-offset:2px; }}
+  .rp-item.taken {{ opacity:.55; }}
+  #rp-out {{ width:100%; margin-top:12px; font:inherit; font-size:12px;
+    border:1px solid var(--hairline); border-radius:8px; padding:8px;
+    background:var(--paper_2); color:var(--ink); resize:vertical; }}
+  .node.hit rect, .node.hit path {{ stroke:var(--ink); stroke-width:6; }}
+  @media (prefers-reduced-motion:no-preference) {{
+    .node.hit rect, .node.hit path {{ animation:hit 1.1s ease-out; }}
+    @keyframes hit {{ 0%,60% {{ stroke-opacity:1; }} 100% {{ stroke-opacity:0; }} }}
+  }}
+  .led {{ flex:1 0 100%; background:var(--paper); border:1px solid var(--hairline);
+    border-radius:16px; padding:16px 24px; }}
+  .led-t {{ font-weight:700; font-size:15px; margin-bottom:12px;
+    border-bottom:2px solid var(--ink); display:inline-block; padding-bottom:2px; }}
+  .led-sum, .led-all {{ font-size:13px; color:var(--muted); margin:0 0 12px; }}
+  .led-sum b {{ color:var(--ink); }}
+  .led-all {{ margin-bottom:0; }}
+  .led-warn {{ font-size:13px; color:var(--no); font-weight:700; margin:0 0 12px; }}
+  .led-tb {{ border-collapse:collapse; width:100%; font-size:13px; }}
+  .led-tb th {{ text-align:left; font-size:11px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--muted); font-weight:700;
+    padding:0 12px 6px 0; border-bottom:1px solid var(--hairline); }}
+  .led-tb td {{ padding:8px 12px 8px 0; border-bottom:1px solid var(--hairline);
+    vertical-align:top; line-height:1.5; }}
+  .led-tb tr:last-child td {{ border-bottom:0; }}
+  .led-k {{ color:var(--muted); white-space:nowrap; }}
+  .led-id {{ font-weight:700; white-space:nowrap; }}
   .canvas {{ flex:1 1 auto; min-width:0; overflow:auto; background:var(--paper);
     border:1px solid var(--hairline); border-radius:16px; padding:8px; }}
   .zoomwrap {{ transform-origin:0 0; width:{W}px; }}
@@ -790,7 +1142,8 @@ HTML_TMPL = """<!DOCTYPE html>
   .n-rect, .n-oval, .n-chip, .n-dia {{ fill:var(--primary); stroke:none; }}
   .n-note {{ fill:#FFFBEC; stroke:var(--perm); stroke-width:2; stroke-dasharray:8 6; }}
   text {{ text-anchor:middle; dominant-baseline:central; font-weight:600;
-    font-family:'Sarabun',sans-serif; }}
+    font-family:'Sarabun','Noto Sans Thai','IBM Plex Sans Thai','Thonburi',
+      sans-serif; }}
   .t-on {{ fill:#fff; }} .t-ink {{ fill:var(--ink); }} .t-note {{ fill:#8A6100; }}
   .e-solid {{ fill:none; stroke:var(--primary); stroke-width:3; }}
   .e-back {{ fill:none; stroke:var(--primary); stroke-width:3; stroke-dasharray:9 8; }}
@@ -846,6 +1199,8 @@ HTML_TMPL = """<!DOCTYPE html>
     </svg>
     </div>
   </div>
+  {report}
+  {ledger}
 </main>
 <script>
   (function () {{
@@ -866,6 +1221,82 @@ HTML_TMPL = """<!DOCTYPE html>
       }});
     }});
     addEventListener('resize', function () {{ if (mode === 'fit') apply(); }});
+
+    // รับ/ไม่รับรายข้อ — จำไว้ในเครื่องผู้ใช้ แล้วคัดลอกกลับไปวางในแชทได้
+    (function () {{
+      var items = [].slice.call(document.querySelectorAll('.rp-item'));
+      if (!items.length) return;
+      var KEY = 'flowreview:' + document.title;
+      var state = {{}};
+      try {{ state = JSON.parse(localStorage.getItem(KEY) || '{{}}'); }}
+      catch (e) {{ state = {{}}; }}
+
+      function paint() {{
+        var y = 0, n = 0, p = 0;
+        items.forEach(function (li) {{
+          var v = state[li.dataset.id] || 'pending';
+          li.classList.toggle('taken', v !== 'pending');
+          li.querySelectorAll('.rp-dec button').forEach(function (b) {{
+            b.setAttribute('aria-pressed', String(b.dataset.v === v));
+          }});
+          if (v === 'yes') y++; else if (v === 'no') n++; else p++;
+        }});
+        document.getElementById('rp-count').textContent =
+          'รับ ' + y + ' · ไม่รับ ' + n + ' · ยังไม่ตัดสิน ' + p +
+          ' จาก ' + items.length + ' ข้อ';
+        try {{ localStorage.setItem(KEY, JSON.stringify(state)); }} catch (e) {{}}
+      }}
+
+      document.querySelectorAll('.rp-dec button').forEach(function (b) {{
+        b.addEventListener('click', function () {{
+          var id = b.dataset.id;
+          state[id] = state[id] === b.dataset.v ? 'pending' : b.dataset.v;
+          paint();
+        }});
+      }});
+
+      document.getElementById('rp-copy').addEventListener('click', function () {{
+        var out = ['ผลรีวิว: ' + document.title];
+        items.forEach(function (li) {{
+          var v = state[li.dataset.id] || 'pending';
+          out.push('- ' + li.dataset.code + ' ' +
+            (v === 'yes' ? 'รับ' : v === 'no' ? 'ไม่รับ' : 'ยังไม่ตัดสิน') +
+            ' — ' + li.dataset.msg);
+        }});
+        var t = out.join('\n');
+        document.getElementById('rp-out').value = t;
+        if (navigator.clipboard) navigator.clipboard.writeText(t);
+      }});
+
+      document.getElementById('rp-reset').addEventListener('click', function () {{
+        state = {{}};
+        document.getElementById('rp-out').value = '';
+        paint();
+      }});
+
+      paint();
+    }})();
+
+    // คลิกชื่อกล่องในผลตรวจ แล้วเลื่อนผังไปหากล่องนั้น + กะพริบให้เห็น
+    document.querySelectorAll('.rp-go').forEach(function (b) {{
+      b.addEventListener('click', function () {{
+        var g = document.getElementById(b.dataset.go);
+        var box = document.querySelector('.canvas');
+        if (!g || !box) return;
+        var r = g.getBoundingClientRect(), c = box.getBoundingClientRect();
+        box.scrollTo({{
+          left: box.scrollLeft + (r.left - c.left) - (c.width - r.width) / 2,
+          top: box.scrollTop + (r.top - c.top) - (c.height - r.height) / 2,
+          behavior: 'smooth'
+        }});
+        document.querySelectorAll('.node.hit').forEach(function (o) {{
+          o.classList.remove('hit');
+        }});
+        void g.getBoundingClientRect();
+        g.classList.add('hit');
+        setTimeout(function () {{ g.classList.remove('hit'); }}, 1200);
+      }});
+    }});
     apply();
   }})();
 </script>
@@ -895,6 +1326,11 @@ def main():
     print(f"  {len(m['nodes'])} nodes · {len(m['edges'])} edges · "
           f"canvas {m['canvas']['w']}×{m['canvas']['h']} · "
           f"diamond {m['geometry']['diamond']['w']}×{m['geometry']['diamond']['h']}")
+    ex = m.get("exports", {})
+    made = [v for v in (ex.get("html"), ex.get("svg"), ex.get("png")) if v]
+    print(f"  ไฟล์ที่ได้: {' · '.join(made)}")
+    if not ex.get("png"):
+        print("  (ไม่ได้ .png — เครื่องนี้ไม่มี qlmanage ของ macOS ใช้ .svg แทนได้)")
 
 
 if __name__ == "__main__":
